@@ -68,6 +68,7 @@ class VisitCreate(BaseModel):
     pessoa_visitada: str
     motivo: str
     observacoes: Optional[str] = None
+    utente_id: Optional[str] = None
 
 
 class BookingCreate(BaseModel):
@@ -77,6 +78,7 @@ class BookingCreate(BaseModel):
     local: str  # one of VALID_LOCATIONS keys
     data_hora: datetime
     observacoes: Optional[str] = None
+    utente_id: Optional[str] = None
 
 
 class Booking(BaseModel):
@@ -299,6 +301,8 @@ async def checkin(payload: VisitCreate):
     doc = visit.model_dump()
     doc["entrada"] = doc["entrada"].isoformat()
     doc["saida"] = None
+    if payload.utente_id:
+        doc["utente_id"] = payload.utente_id
     # expires_at is a BSON Date used by MongoDB's TTL index to auto-delete after 1 year
     doc["expires_at"] = visit.entrada + timedelta(days=365)
     await db.visits.insert_one(doc)
@@ -531,6 +535,8 @@ async def create_booking(payload: BookingCreate):
     doc = booking.model_dump()
     doc["data_hora"] = doc["data_hora"].isoformat()
     doc["created_at"] = doc["created_at"].isoformat()
+    if payload.utente_id:
+        doc["utente_id"] = payload.utente_id
     doc["expires_at"] = booking.data_hora + timedelta(days=365)
     await db.bookings.insert_one(doc)
     return booking
