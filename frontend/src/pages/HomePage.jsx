@@ -22,9 +22,9 @@ export default function HomePage() {
           <div className="col-span-12 lg:col-span-8">
             <div className="label-up mb-5" data-testid="home-eyebrow">Registo digital de visitas</div>
             <h1 className="font-heading text-5xl sm:text-6xl lg:text-7xl tracking-tight font-light text-[#1F2924] leading-[1.05]">
-              Quem entra.<br />
-              Quem sai.<br />
-              <span className="text-[#4A7C59]">Sempre registado.</span>
+              Centro<br />
+              Social<br />
+              <span className="text-[#4A7C59]">de Brito</span>
             </h1>
           </div>
           <div className="col-span-12 lg:col-span-4 text-lg md:text-xl leading-relaxed text-[#5C6B62] lg:pb-3">
