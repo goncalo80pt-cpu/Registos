@@ -9,23 +9,21 @@ import CheckoutPage from "@/pages/CheckoutPage";
 import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import HistoryPage from "@/pages/HistoryPage";
-import AuthCallback from "@/pages/AuthCallback";
+import BookingPage from "@/pages/BookingPage";
+import BookingsAdminPage from "@/pages/BookingsAdminPage";
 
 function AppRouter() {
   const location = useLocation();
-  // Synchronous check: if returning from Google OAuth, force callback handling first
-  if (location.hash?.includes("session_id=")) {
-    return <AuthCallback />;
-  }
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/entrada" element={<CheckinPage />} />
       <Route path="/saida" element={<CheckoutPage />} />
+      <Route path="/marcar" element={<BookingPage />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/dashboard" element={<DashboardPage />} />
       <Route path="/historico" element={<HistoryPage />} />
+      <Route path="/marcacoes" element={<BookingsAdminPage />} />
     </Routes>
   );
 }

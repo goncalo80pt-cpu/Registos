@@ -25,6 +25,22 @@ db = client[os.environ['DB_NAME']]
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@instituicao.pt')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')
 
+# Administradores fixos (Nome + Palavra-passe)
+ADMIN_USERS = [
+    {"name": "Erpi Sede", "password": "sede123"},
+    {"name": "Erpi Parais", "password": "paraiso123"},
+    {"name": "Lar Residencial", "password": "larresidencial123"},
+]
+
+# Locais de visita (substitui o antigo 'instituicao' creche/lar)
+VALID_LOCATIONS = {
+    "erpi_sede": "Erpi Sede",
+    "erpi_parais": "Erpi Parais",
+    "lar_residencial": "Lar Residencial",
+    "secretaria_sede": "Secretaria Sede",
+    "secretaria_paraiso": "Secretaria Paraíso",
+}
+
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
@@ -40,18 +56,39 @@ class User(BaseModel):
 
 
 class AdminLogin(BaseModel):
-    email: str
+    name: str
     password: str
 
 
 class VisitCreate(BaseModel):
-    instituicao: str  # "creche" | "lar"
+    instituicao: str  # one of VALID_LOCATIONS keys
     visitante_nome: str
     documento: Optional[str] = None
     telefone: Optional[str] = None
-    pessoa_visitada: str  # nome da criança / idoso
+    pessoa_visitada: str
     motivo: str
     observacoes: Optional[str] = None
+
+
+class BookingCreate(BaseModel):
+    visitante_nome: str
+    telefone: Optional[str] = None
+    pessoa_visitada: str
+    local: str  # one of VALID_LOCATIONS keys
+    data_hora: datetime
+    observacoes: Optional[str] = None
+
+
+class Booking(BaseModel):
+    booking_id: str
+    visitante_nome: str
+    telefone: Optional[str] = None
+    pessoa_visitada: str
+    local: str
+    data_hora: datetime
+    observacoes: Optional[str] = None
+    status: str = "marcada"  # marcada | concluida | cancelada
+    created_at: datetime
 
 
 class Visit(BaseModel):
@@ -167,16 +204,22 @@ async def auth_session(response: Response, x_session_id: Optional[str] = Header(
 
 @api_router.post("/auth/admin-login")
 async def admin_login(payload: AdminLogin, response: Response):
-    if payload.email.lower() != ADMIN_EMAIL.lower() or payload.password != ADMIN_PASSWORD:
-        raise HTTPException(status_code=401, detail="Credenciais inválidas")
+    name_in = (payload.name or "").strip()
+    matched = next(
+        (a for a in ADMIN_USERS if a["name"].lower() == name_in.lower() and a["password"] == payload.password),
+        None,
+    )
+    if not matched:
+        raise HTTPException(status_code=401, detail="Nome ou palavra-passe incorrectos")
 
-    user = await db.users.find_one({"email": ADMIN_EMAIL.lower()}, {"_id": 0})
+    fake_email = matched["name"].lower().replace(" ", "_") + "@admin.local"
+    user = await db.users.find_one({"email": fake_email}, {"_id": 0})
     if not user:
         user_id = f"user_{uuid.uuid4().hex[:12]}"
         user = {
             "user_id": user_id,
-            "email": ADMIN_EMAIL.lower(),
-            "name": "Administrador",
+            "email": fake_email,
+            "name": matched["name"],
             "picture": None,
             "is_admin": True,
             "auth_provider": "admin",
@@ -227,8 +270,8 @@ def _visit_from_doc(doc: dict) -> Visit:
 
 @api_router.post("/visits/checkin", response_model=Visit)
 async def checkin(payload: VisitCreate):
-    if payload.instituicao not in ("creche", "lar"):
-        raise HTTPException(status_code=400, detail="instituicao deve ser 'creche' ou 'lar'")
+    if payload.instituicao not in VALID_LOCATIONS:
+        raise HTTPException(status_code=400, detail=f"Local inválido. Escolha um de: {', '.join(VALID_LOCATIONS.keys())}")
     visit = Visit(
         visit_id=f"v_{uuid.uuid4().hex[:12]}",
         instituicao=payload.instituicao,
@@ -266,7 +309,7 @@ async def checkout(visit_id: str):
 @api_router.get("/visits/active", response_model=List[Visit])
 async def active_visits(instituicao: Optional[str] = None):
     query = {"saida": None}
-    if instituicao in ("creche", "lar"):
+    if instituicao in VALID_LOCATIONS:
         query["instituicao"] = instituicao
     docs = await db.visits.find(query, {"_id": 0}).sort("entrada", -1).to_list(500)
     return [_visit_from_doc(d) for d in docs]
@@ -285,7 +328,7 @@ async def history(
     query: dict = {}
     if nome:
         query["visitante_nome"] = {"$regex": nome, "$options": "i"}
-    if instituicao in ("creche", "lar"):
+    if instituicao in VALID_LOCATIONS:
         query["instituicao"] = instituicao
     if data_inicio or data_fim:
         rng = {}
@@ -305,8 +348,14 @@ async def stats(request: Request, authorization: Optional[str] = Header(None)):
     total = await db.visits.count_documents({})
     dentro = await db.visits.count_documents({"saida": None})
     hoje = await db.visits.count_documents({"entrada": {"$gte": today, "$lt": today + "T23:59:59"}})
-    creche_dentro = await db.visits.count_documents({"saida": None, "instituicao": "creche"})
-    lar_dentro = await db.visits.count_documents({"saida": None, "instituicao": "lar"})
+    creche_dentro = 0  # legacy field, kept for compat
+    lar_dentro = await db.visits.count_documents({"saida": None, "instituicao": {"$in": list(VALID_LOCATIONS.keys())}})
+
+    # Per-location counts
+    por_local = {}
+    for key, label in VALID_LOCATIONS.items():
+        c = await db.visits.count_documents({"saida": None, "instituicao": key})
+        por_local[key] = {"label": label, "dentro": c}
 
     # average time (minutes) for completed visits
     pipeline = [
@@ -335,6 +384,7 @@ async def stats(request: Request, authorization: Optional[str] = Header(None)):
         "lar_dentro": lar_dentro,
         "tempo_medio_min": avg_minutes,
         "ultimos_7_dias": last7,
+        "por_local": por_local,
     }
 
 
@@ -351,9 +401,11 @@ async def export_csv(request: Request, authorization: Optional[str] = Header(Non
         "Pessoa Visitada", "Motivo", "Observações", "Entrada", "Saída",
     ])
     for d in docs:
+        loc_key = d.get("instituicao") or ""
+        loc_label = VALID_LOCATIONS.get(loc_key, loc_key)
         writer.writerow([
             d.get("visit_id", ""),
-            "Creche" if d.get("instituicao") == "creche" else "Lar de Idosos",
+            loc_label,
             d.get("visitante_nome", ""),
             d.get("documento", "") or "",
             d.get("telefone", "") or "",
@@ -374,6 +426,105 @@ async def export_csv(request: Request, authorization: Optional[str] = Header(Non
 @api_router.get("/")
 async def root():
     return {"message": "Registo de Visitas API"}
+
+
+# ----------------- Bookings (Marcar Visita) -----------------
+def _booking_from_doc(doc: dict) -> Booking:
+    for k in ("data_hora", "created_at"):
+        v = doc.get(k)
+        if isinstance(v, str):
+            try:
+                doc[k] = datetime.fromisoformat(v)
+            except Exception:
+                pass
+    return Booking(**doc)
+
+
+@api_router.post("/bookings", response_model=Booking)
+async def create_booking(payload: BookingCreate):
+    if payload.local not in VALID_LOCATIONS:
+        raise HTTPException(status_code=400, detail=f"Local inválido. Escolha um de: {', '.join(VALID_LOCATIONS.keys())}")
+    if not payload.visitante_nome.strip() or not payload.pessoa_visitada.strip():
+        raise HTTPException(status_code=400, detail="Nome do visitante e do idoso são obrigatórios")
+
+    dh = payload.data_hora
+    if dh.tzinfo is None:
+        dh = dh.replace(tzinfo=timezone.utc)
+    if dh < datetime.now(timezone.utc) - timedelta(minutes=5):
+        raise HTTPException(status_code=400, detail="A data e hora da visita devem ser no futuro")
+
+    booking = Booking(
+        booking_id=f"b_{uuid.uuid4().hex[:12]}",
+        visitante_nome=payload.visitante_nome.strip(),
+        telefone=(payload.telefone or "").strip() or None,
+        pessoa_visitada=payload.pessoa_visitada.strip(),
+        local=payload.local,
+        data_hora=dh,
+        observacoes=(payload.observacoes or "").strip() or None,
+        status="marcada",
+        created_at=datetime.now(timezone.utc),
+    )
+    doc = booking.model_dump()
+    doc["data_hora"] = doc["data_hora"].isoformat()
+    doc["created_at"] = doc["created_at"].isoformat()
+    # auto-delete 1 year after the scheduled visit
+    doc["expires_at"] = booking.data_hora + timedelta(days=365)
+    await db.bookings.insert_one(doc)
+    return booking
+
+
+@api_router.get("/bookings", response_model=List[Booking])
+async def list_bookings(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+    status: Optional[str] = None,
+    upcoming: bool = False,
+):
+    await require_admin(request, authorization)
+    query: dict = {}
+    if status in ("marcada", "concluida", "cancelada"):
+        query["status"] = status
+    if upcoming:
+        query["data_hora"] = {"$gte": datetime.now(timezone.utc).isoformat()}
+        query["status"] = "marcada"
+    docs = await db.bookings.find(query, {"_id": 0}).sort("data_hora", 1).to_list(length=None)
+    return [_booking_from_doc(d) for d in docs]
+
+
+@api_router.post("/bookings/{booking_id}/cancel", response_model=Booking)
+async def cancel_booking(booking_id: str, request: Request, authorization: Optional[str] = Header(None)):
+    await require_admin(request, authorization)
+    doc = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Marcação não encontrada")
+    await db.bookings.update_one({"booking_id": booking_id}, {"$set": {"status": "cancelada"}})
+    doc["status"] = "cancelada"
+    return _booking_from_doc(doc)
+
+
+@api_router.post("/bookings/{booking_id}/conclude", response_model=Booking)
+async def conclude_booking(booking_id: str, request: Request, authorization: Optional[str] = Header(None)):
+    await require_admin(request, authorization)
+    doc = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Marcação não encontrada")
+    await db.bookings.update_one({"booking_id": booking_id}, {"$set": {"status": "concluida"}})
+    doc["status"] = "concluida"
+    return _booking_from_doc(doc)
+
+
+@api_router.delete("/bookings/{booking_id}")
+async def delete_booking(booking_id: str, request: Request, authorization: Optional[str] = Header(None)):
+    await require_admin(request, authorization)
+    res = await db.bookings.delete_one({"booking_id": booking_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Marcação não encontrada")
+    return {"ok": True}
+
+
+@api_router.get("/locations")
+async def get_locations():
+    return [{"key": k, "label": v} for k, v in VALID_LOCATIONS.items()]
 
 
 app.include_router(api_router)
@@ -399,8 +550,15 @@ async def setup_indexes():
     # We set expires_at = entrada + 365 days, so records survive for 1 full year and are then purged.
     try:
         await db.visits.create_index("expires_at", expireAfterSeconds=0)
+        await db.bookings.create_index("expires_at", expireAfterSeconds=0)
     except Exception as e:
         logger.warning(f"Failed to create TTL index: {e}")
+    # Migrate legacy 'creche' / 'lar' values to the new location keys
+    try:
+        await db.visits.update_many({"instituicao": "creche"}, {"$set": {"instituicao": "secretaria_sede"}})
+        await db.visits.update_many({"instituicao": "lar"}, {"$set": {"instituicao": "lar_residencial"}})
+    except Exception as e:
+        logger.warning(f"Failed to migrate legacy locations: {e}")
     # Backfill existing visits (created before this feature) so they also get auto-deleted 1 year after entrada
     try:
         cursor = db.visits.find({"expires_at": {"$exists": False}}, {"_id": 1, "visit_id": 1, "entrada": 1})

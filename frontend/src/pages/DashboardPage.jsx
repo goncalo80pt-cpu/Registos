@@ -3,7 +3,7 @@ import Header from "../components/Header";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useNavigate } from "react-router-dom";
-import { Users, Clock, CalendarCheck, Baby, HeartHandshake, TrendingUp } from "lucide-react";
+import { Users, Clock, CalendarCheck, Building2, TrendingUp } from "lucide-react";
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
@@ -69,11 +69,12 @@ export default function DashboardPage() {
               <div className="card-crisp p-8 flex flex-col gap-6" data-testid="split-inside">
                 <div>
                   <div className="label-up mb-1">Dentro agora</div>
-                  <div className="font-heading text-2xl text-[#1F2924]">Por instituição</div>
+                  <div className="font-heading text-2xl text-[#1F2924]">Por local</div>
                 </div>
-                <div className="flex-1 flex flex-col gap-5">
-                  <SplitRow icon={Baby} color="#4A7C59" label="Creche / Infantário" value={stats.creche_dentro} />
-                  <SplitRow icon={HeartHandshake} color="#C26D5C" label="Lar de Idosos" value={stats.lar_dentro} />
+                <div className="flex-1 flex flex-col gap-4">
+                  {stats.por_local && Object.entries(stats.por_local).map(([key, val]) => (
+                    <SplitRow key={key} icon={Building2} color="#4A7C59" label={val.label} value={val.dentro} />
+                  ))}
                 </div>
                 <button onClick={() => navigate("/historico")} className="btn-ghost px-5 py-3 text-sm" data-testid="go-history">Ver histórico completo</button>
               </div>

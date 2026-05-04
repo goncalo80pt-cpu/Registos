@@ -3,7 +3,7 @@ import Header from "../components/Header";
 import { api, API } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useNavigate } from "react-router-dom";
-import { Search, Download, Calendar, Baby, HeartHandshake, Filter } from "lucide-react";
+import { Search, Download, Calendar, Building2, Filter } from "lucide-react";
 import { toast } from "sonner";
 
 function fmtDate(iso) {
@@ -26,6 +26,8 @@ export default function HistoryPage() {
   const [dataFim, setDataFim] = useState("");
   const [rows, setRows] = useState([]);
   const [fetching, setFetching] = useState(true);
+  const [locations, setLocations] = useState([]);
+  const locMap = locations.reduce((m, l) => ({ ...m, [l.key]: l.label }), {});
 
   const load = useCallback(async () => {
     setFetching(true);
@@ -35,8 +37,12 @@ export default function HistoryPage() {
       if (instituicao) params.instituicao = instituicao;
       if (dataInicio) params.data_inicio = dataInicio;
       if (dataFim) params.data_fim = dataFim;
-      const res = await api.get("/visits/history", { params });
+      const [res, ls] = await Promise.all([
+        api.get("/visits/history", { params }),
+        api.get("/locations"),
+      ]);
       setRows(res.data);
+      setLocations(ls.data);
     } catch (e) {
       toast.error("Erro a carregar histórico");
     } finally {
@@ -100,11 +106,10 @@ export default function HistoryPage() {
               </div>
             </div>
             <div>
-              <label className="label-up mb-2 block">Instituição</label>
+              <label className="label-up mb-2 block">Local</label>
               <select className="input-kiosk !h-12 !text-base" style={{height:'3rem', fontSize:'1rem'}} value={instituicao} onChange={e=>setInstituicao(e.target.value)} data-testid="filter-instituicao">
-                <option value="">Todas</option>
-                <option value="creche">Creche</option>
-                <option value="lar">Lar</option>
+                <option value="">Todos</option>
+                {locations.map(l => <option key={l.key} value={l.key}>{l.label}</option>)}
               </select>
             </div>
             <div>
@@ -138,7 +143,7 @@ export default function HistoryPage() {
               <table className="w-full" data-testid="history-table">
                 <thead>
                   <tr className="text-left border-b border-[#E5E7E2] bg-[#F9F8F6]">
-                    <th className="label-up p-4">Instituição</th>
+                    <th className="label-up p-4">Local</th>
                     <th className="label-up p-4">Visitante</th>
                     <th className="label-up p-4">Visita a</th>
                     <th className="label-up p-4">Motivo</th>
@@ -149,15 +154,13 @@ export default function HistoryPage() {
                 </thead>
                 <tbody>
                   {rows.map(r => {
-                    const creche = r.instituicao === "creche";
-                    const Icon = creche ? Baby : HeartHandshake;
-                    const color = creche ? "#4A7C59" : "#C26D5C";
+                    const localLabel = locMap[r.instituicao] || r.instituicao;
                     return (
                       <tr key={r.visit_id} className="border-b border-[#E5E7E2] last:border-0 hover:bg-[#F9F8F6] transition" data-testid={`history-row-${r.visit_id}`}>
                         <td className="p-4">
-                          <div className="flex items-center gap-2 text-sm" style={{ color }}>
-                            <Icon className="w-4 h-4" />
-                            <span>{creche ? "Creche" : "Lar"}</span>
+                          <div className="flex items-center gap-2 text-sm text-[#4A7C59]">
+                            <Building2 className="w-4 h-4" />
+                            <span>{localLabel}</span>
                           </div>
                         </td>
                         <td className="p-4">

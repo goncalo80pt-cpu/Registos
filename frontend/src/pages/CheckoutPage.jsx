@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import Header from "../components/Header";
 import { api } from "../lib/api";
 import { toast } from "sonner";
-import { LogOut, Clock, Baby, HeartHandshake, Search } from "lucide-react";
+import { LogOut, Clock, Building2, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 function timeSince(iso) {
@@ -20,11 +20,14 @@ export default function CheckoutPage() {
   const [filter, setFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [confirmId, setConfirmId] = useState(null);
+  const [locations, setLocations] = useState({});
 
   const load = useCallback(async () => {
     try {
-      const res = await api.get("/visits/active");
+      const [res, ls] = await Promise.all([api.get("/visits/active"), api.get("/locations")]);
       setList(res.data);
+      const map = {}; ls.data.forEach(l => { map[l.key] = l.label; });
+      setLocations(map);
     } catch (e) {
       toast.error("Erro a carregar visitantes");
     } finally {
@@ -87,19 +90,17 @@ export default function CheckoutPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5" data-testid="active-list">
             {filtered.map((v) => {
-              const isCreche = v.instituicao === "creche";
-              const Icon = isCreche ? Baby : HeartHandshake;
-              const color = isCreche ? "#4A7C59" : "#C26D5C";
+              const localLabel = locations[v.instituicao] || v.instituicao;
               return (
                 <div key={v.visit_id} className="card-crisp p-7 flex items-start justify-between gap-4" data-testid={`active-item-${v.visit_id}`}>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 label-up mb-3" style={{ color }}>
-                      <Icon className="w-4 h-4" />
-                      <span>{isCreche ? "Creche" : "Lar de Idosos"}</span>
+                    <div className="flex items-center gap-2 label-up mb-3 text-[#4A7C59]">
+                      <Building2 className="w-4 h-4" />
+                      <span>{localLabel}</span>
                     </div>
                     <div className="font-heading text-2xl font-medium text-[#1F2924] mb-1 truncate">{v.visitante_nome}</div>
                     <div className="text-[#5C6B62] text-sm mb-3">
-                      {isCreche ? "veio buscar" : "veio visitar"} <span className="text-[#1F2924] font-medium">{v.pessoa_visitada}</span>
+                      veio visitar <span className="text-[#1F2924] font-medium">{v.pessoa_visitada}</span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-[#5C6B62]">
                       <Clock className="w-3.5 h-3.5" />

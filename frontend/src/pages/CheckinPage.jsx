@@ -1,16 +1,16 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Header from "../components/Header";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { toast } from "sonner";
-import { Baby, HeartHandshake, Check } from "lucide-react";
+import { Check, Building2 } from "lucide-react";
 
-const IMG_CRECHE = "https://images.unsplash.com/photo-1777056491418-d4ff81a4ad92?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzd8MHwxfHNlYXJjaHwxfHxraW5kZXJnYXJ0ZW4lMjBjaGlsZHJlbiUyMHBsYXl8ZW58MHx8fHwxNzc3ODg1MjkwfDA&ixlib=rb-4.1.0&q=85";
-const IMG_LAR = "https://images.unsplash.com/photo-1773227059780-5e865ce7fb13?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTN8MHwxfHNlYXJjaHwyfHxoYXBweSUyMGVsZGVybHklMjBjYXJlfGVufDB8fHx8MTc3Nzg4NTI5MXww&ixlib=rb-4.1.0&q=85";
+const HERO_IMG = "https://images.unsplash.com/photo-1773227059780-5e865ce7fb13?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTN8MHwxfHNlYXJjaHwyfHxoYXBweSUyMGVsZGVybHklMjBjYXJlfGVufDB8fHx8MTc3Nzg4NTI5MXww&ixlib=rb-4.1.0&q=85";
 
 export default function CheckinPage() {
   const navigate = useNavigate();
-  const [instituicao, setInstituicao] = useState(null);
+  const [locations, setLocations] = useState([]);
+  const [local, setLocal] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
     visitante_nome: "",
@@ -21,21 +21,25 @@ export default function CheckinPage() {
     observacoes: "",
   });
 
+  useEffect(() => {
+    api.get("/locations").then(r => setLocations(r.data)).catch(() => {});
+  }, []);
+
   const update = (k) => (e) => setForm({ ...form, [k]: e.target.value });
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!instituicao) {
-      toast.error("Escolha o tipo de instituição.");
+    if (!local) {
+      toast.error("Escolha o local da visita.");
       return;
     }
     if (!form.visitante_nome.trim() || !form.pessoa_visitada.trim() || !form.motivo.trim()) {
-      toast.error("Preencha nome, pessoa visitada e motivo.");
+      toast.error("Preencha o seu nome, o nome do idoso e o motivo.");
       return;
     }
     setSubmitting(true);
     try {
-      const res = await api.post("/visits/checkin", { ...form, instituicao });
+      const res = await api.post("/visits/checkin", { ...form, instituicao: local });
       toast.success(`Entrada registada às ${new Date(res.data.entrada).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}`);
       navigate("/", { replace: true });
     } catch (err) {
@@ -49,54 +53,37 @@ export default function CheckinPage() {
     <div className="min-h-screen" data-testid="checkin-page">
       <Header minimal />
       <main className="grid grid-cols-1 lg:grid-cols-2 min-h-[calc(100vh-90px)]">
-        {/* Left - visual */}
         <div className="relative hidden lg:block overflow-hidden bg-[#1F2924]">
-          <img
-            src={instituicao === "creche" ? IMG_CRECHE : IMG_LAR}
-            alt="visita"
-            className="absolute inset-0 w-full h-full object-cover opacity-90 transition-opacity duration-700"
-          />
+          <img src={HERO_IMG} alt="visita" className="absolute inset-0 w-full h-full object-cover opacity-90" />
           <div className="absolute inset-0 bg-gradient-to-tr from-[#1F2924]/80 via-[#1F2924]/20 to-transparent" />
           <div className="relative z-10 h-full flex flex-col justify-end p-14 text-white">
-            <div className="label-up text-white/80 mb-5">{instituicao === "creche" ? "Creche / Infantário" : "Lar de Idosos"}</div>
+            <div className="label-up text-white/80 mb-5">Centro Social de Brito</div>
             <h2 className="font-heading text-5xl font-light leading-tight max-w-md">
-              {instituicao === "creche"
-                ? "Cada chegada, um sorriso registado."
-                : "Cada visita, um momento que importa."}
+              Cada visita, um momento que importa.
             </h2>
           </div>
         </div>
 
-        {/* Right - form */}
         <div className="p-8 md:p-12 lg:p-20 fade-in-up">
           <div className="max-w-xl">
             <div className="label-up mb-4">Registo de entrada</div>
             <h1 className="font-heading text-4xl md:text-5xl font-light text-[#1F2924] mb-10">Vamos começar</h1>
 
-            {/* Instituição selector */}
             <div className="mb-10">
-              <div className="label-up mb-4">Vem visitar</div>
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  onClick={() => setInstituicao("creche")}
-                  className={`p-6 rounded-xl border-2 text-left transition-all ${instituicao === "creche" ? "border-[#4A7C59] bg-[#F1F2F0]" : "border-[#E5E7E2] hover:border-[#4A7C59]/60"}`}
-                  data-testid="select-creche"
-                >
-                  <Baby className={`w-8 h-8 mb-3 ${instituicao === "creche" ? "text-[#4A7C59]" : "text-[#5C6B62]"}`} />
-                  <div className="font-heading text-xl font-medium">Criança</div>
-                  <div className="text-sm text-[#5C6B62]">Creche / Infantário</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setInstituicao("lar")}
-                  className={`p-6 rounded-xl border-2 text-left transition-all ${instituicao === "lar" ? "border-[#C26D5C] bg-[#F1F2F0]" : "border-[#E5E7E2] hover:border-[#C26D5C]/60"}`}
-                  data-testid="select-lar"
-                >
-                  <HeartHandshake className={`w-8 h-8 mb-3 ${instituicao === "lar" ? "text-[#C26D5C]" : "text-[#5C6B62]"}`} />
-                  <div className="font-heading text-xl font-medium">Idoso</div>
-                  <div className="text-sm text-[#5C6B62]">Lar de Idosos</div>
-                </button>
+              <div className="label-up mb-4">Local da visita</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {locations.map(loc => (
+                  <button
+                    key={loc.key}
+                    type="button"
+                    onClick={() => setLocal(loc.key)}
+                    className={`p-5 rounded-xl border-2 text-left transition-all ${local === loc.key ? "border-[#4A7C59] bg-[#F1F2F0]" : "border-[#E5E7E2] hover:border-[#4A7C59]/60"}`}
+                    data-testid={`select-local-${loc.key}`}
+                  >
+                    <Building2 className={`w-6 h-6 mb-2 ${local === loc.key ? "text-[#4A7C59]" : "text-[#5C6B62]"}`} />
+                    <div className="font-heading text-lg font-medium leading-tight">{loc.label}</div>
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -107,13 +94,13 @@ export default function CheckinPage() {
               </div>
 
               <div>
-                <label className="label-up mb-2 block">{instituicao === "creche" ? "Nome da criança *" : "Nome do idoso *"}</label>
-                <input className="input-kiosk" value={form.pessoa_visitada} onChange={update("pessoa_visitada")} placeholder={instituicao === "creche" ? "Ex: João Silva" : "Ex: Sr. António"} data-testid="input-visitado" />
+                <label className="label-up mb-2 block">Nome do idoso *</label>
+                <input className="input-kiosk" value={form.pessoa_visitada} onChange={update("pessoa_visitada")} placeholder="Ex: Sr. António" data-testid="input-visitado" />
               </div>
 
               <div>
                 <label className="label-up mb-2 block">Motivo *</label>
-                <input className="input-kiosk" value={form.motivo} onChange={update("motivo")} placeholder={instituicao === "creche" ? "Ex: Buscar ao fim do dia" : "Ex: Visita familiar"} data-testid="input-motivo" />
+                <input className="input-kiosk" value={form.motivo} onChange={update("motivo")} placeholder="Ex: Visita familiar" data-testid="input-motivo" />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

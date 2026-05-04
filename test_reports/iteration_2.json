@@ -1,0 +1,42 @@
+{
+  "summary": "Full E2E test of refactored Centro Social de Brito v2 (3 admins by name, 5 destinations, no creche, new bookings feature). Backend: 22/22 pytest passed. Frontend: all critical flows verified (home 3 tiles, /entrada with 5 locations, /marcar full booking submission, /login by name, /dashboard with 5-location stats, /marcacoes admin with conclude/cancel/delete actions). 0 critical issues.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "BookingPage / HistoryPage", "issues": ["Date and time inputs use browser-native pickers (input type=date/time) instead of shadcn Calendar component — guideline preference, not a functional bug"]},
+      {"screen": "Console", "issues": ["GET /api/auth/me returns 401 on unauthenticated public pages (Home, /entrada, /marcar) — pollutes browser console; consider suppressing or only fetching me when token exists"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_brito_v2.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Optional: replace native date/time pickers in BookingPage and HistoryPage with shadcn Calendar/TimePicker for design consistency",
+    "Optional: skip GET /api/auth/me when no session_token exists in localStorage to avoid noisy 401s in console"
+  ],
+  "critical_code_review_comments": [
+    "server.py is now ~590 lines and handles auth + visits + bookings + stats — close to the 700-line guideline. Consider splitting into routers/visits.py, routers/bookings.py, routers/auth.py before further growth.",
+    "ADMIN_USERS hard-coded in source with plain-text passwords (sede123 etc.). This is acceptable for an internal kiosk but should at minimum live in /app/backend/.env (e.g. ADMIN_PASSWORDS_JSON) so passwords can be rotated without a code deploy.",
+    "/api/visits/checkin is fully public (no auth) — anyone with the URL can spam the visits collection. Same for /api/bookings. Consider adding a simple kiosk token or rate limit.",
+    "BookingCreate has no validation that data_hora is not unrealistically far in future (e.g. year 9999) and does not clamp seconds.",
+    "stats endpoint does N+1 count_documents calls (5 locations + 7 days = 12 round trips). Could be a single $facet aggregation; minor at current volume.",
+    "Migration on startup (creche -> secretaria_sede, lar -> lar_residencial) runs on every boot. Idempotent so safe, but log/metric the count migrated.",
+    "No DELETE/cancel endpoint for visits — only checkout. If an entry is created by mistake there is no admin recovery path.",
+    "expires_at TTL is set as a Python datetime (BSON Date) for new docs but the backfill loop also uses datetime — consistent. Good."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_brito_v2.py",
+    "/app/test_reports/iteration_2.json",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "success_rate": {"backend": "100% (22/22)", "frontend": "100% (all targeted flows)"},
+  "test_credentials": "Erpi Sede / sede123 (verified). Erpi Parais / paraiso123 and Lar Residencial / larresidencial123 also verified via backend tests.",
+  "seed_data_creation": "Created several TEST_-prefixed visits and bookings (TEST_UI_Visitante, TEST_BookingUser, TEST_Conclude, TEST_Delete). Some are auto-cleaned by tests (DELETE /api/bookings/{id}); others remain in the DB but marked TEST_ for easy cleanup.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Refactor v2 verified end-to-end. Backend pytest at /app/backend/tests/test_brito_v2.py covers all 3 admin logins, /api/locations (5 keys, no creche), checkin with new+legacy+invalid locations, bookings CRUD (create/list/filter/conclude/cancel/delete), past-date rejection, admin auth gating. Frontend Playwright covered: home tiles, /entrada 5-location selection, /marcar submission with future date, admin login by name, dashboard 'por local' with 5 keys, marcacoes filters and action buttons (conclude/cancel/delete). Google OAuth flow not tested (requires real session id).",
+  "rca_of_the_issue": "No bugs found. Implementation matches the refactor spec: admin login by name (not email), 5 destinations replacing creche/lar, public bookings feature with future-date validation, admin-only management endpoints. Migration of legacy 'creche'/'lar' instituicao values runs on startup."
+}
