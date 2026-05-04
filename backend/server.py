@@ -585,6 +585,8 @@ async def list_bookings(
     authorization: Optional[str] = Header(None),
     status: Optional[str] = None,
     upcoming: bool = False,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
 ):
     await require_admin(request, authorization)
     query: dict = {}
@@ -593,6 +595,13 @@ async def list_bookings(
     if upcoming:
         query["data_hora"] = {"$gte": datetime.now(timezone.utc).isoformat()}
         query["status"] = "marcada"
+    if date_from or date_to:
+        rng: dict = query.get("data_hora", {})
+        if date_from:
+            rng["$gte"] = date_from + "T00:00:00+00:00"
+        if date_to:
+            rng["$lte"] = date_to + "T23:59:59+00:00"
+        query["data_hora"] = rng
     docs = await db.bookings.find(query, {"_id": 0}).sort("data_hora", 1).to_list(length=None)
     return [_booking_from_doc(d) for d in docs]
 
