@@ -440,6 +440,47 @@ def _booking_from_doc(doc: dict) -> Booking:
     return Booking(**doc)
 
 
+# ----------------- Visit hours rules -----------------
+# Slots de 30 minutos. Segunda (0) e Sexta (4) começam às 14:00. Outros dias começam às 10:00.
+# Última visita começa às 16:00 (termina 16:30).
+SLOT_MINUTES = 30
+LAST_SLOT_HOUR = 16
+LAST_SLOT_MIN = 0
+AFTERNOON_ONLY_WEEKDAYS = {0, 4}  # Monday, Friday
+AFTERNOON_START_HOUR = 14
+NORMAL_START_HOUR = 10
+
+
+def slots_for_date(date_obj):
+    """Return list of (hour, minute) slot starts available for a given calendar date."""
+    weekday = date_obj.weekday()
+    if weekday in AFTERNOON_ONLY_WEEKDAYS:
+        start_h = AFTERNOON_START_HOUR
+    else:
+        start_h = NORMAL_START_HOUR
+    slots = []
+    h, m = start_h, 0
+    while (h, m) <= (LAST_SLOT_HOUR, LAST_SLOT_MIN):
+        slots.append((h, m))
+        m += SLOT_MINUTES
+        if m >= 60:
+            h += 1
+            m = 0
+    return slots
+
+
+def _validate_slot_or_raise(dh):
+    """Raise HTTPException if dh is not a valid bookable slot."""
+    if dh.minute not in (0, 30) or dh.second != 0 or dh.microsecond != 0:
+        raise HTTPException(status_code=400, detail="A hora deve ser certa (00 ou 30 minutos).")
+    valid_starts = slots_for_date(dh.date())
+    if (dh.hour, dh.minute) not in valid_starts:
+        weekday = dh.weekday()
+        if weekday in AFTERNOON_ONLY_WEEKDAYS:
+            raise HTTPException(status_code=400, detail="À segunda e sexta-feira só há visitas das 14:00 às 16:30.")
+        raise HTTPException(status_code=400, detail="Horário fora do período de visitas (10:00 às 16:30).")
+
+
 @api_router.post("/bookings", response_model=Booking)
 async def create_booking(payload: BookingCreate):
     if payload.local not in VALID_LOCATIONS:
@@ -452,6 +493,17 @@ async def create_booking(payload: BookingCreate):
         dh = dh.replace(tzinfo=timezone.utc)
     if dh < datetime.now(timezone.utc) - timedelta(minutes=5):
         raise HTTPException(status_code=400, detail="A data e hora da visita devem ser no futuro")
+
+    _validate_slot_or_raise(dh)
+
+    # Slot uniqueness: only 1 visit per slot per local (active = marcada)
+    existing = await db.bookings.find_one({
+        "local": payload.local,
+        "data_hora": dh.isoformat(),
+        "status": "marcada",
+    }, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=409, detail="Esse horário já está ocupado neste local. Escolha outro slot.")
 
     booking = Booking(
         booking_id=f"b_{uuid.uuid4().hex[:12]}",
@@ -467,10 +519,64 @@ async def create_booking(payload: BookingCreate):
     doc = booking.model_dump()
     doc["data_hora"] = doc["data_hora"].isoformat()
     doc["created_at"] = doc["created_at"].isoformat()
-    # auto-delete 1 year after the scheduled visit
     doc["expires_at"] = booking.data_hora + timedelta(days=365)
     await db.bookings.insert_one(doc)
     return booking
+
+
+@api_router.get("/bookings/availability")
+async def get_availability(date: str, local: str):
+    """Return slot availability for a given date and location.
+
+    Query params:
+      date: YYYY-MM-DD
+      local: one of VALID_LOCATIONS keys
+    """
+    if local not in VALID_LOCATIONS:
+        raise HTTPException(status_code=400, detail="Local inválido")
+    try:
+        date_obj = datetime.fromisoformat(date).date()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Data inválida (use YYYY-MM-DD)")
+
+    valid_slots = slots_for_date(date_obj)
+    weekday = date_obj.weekday()
+
+    # Find taken slots for this date+local with status=marcada
+    day_start = datetime(date_obj.year, date_obj.month, date_obj.day, 0, 0, tzinfo=timezone.utc).isoformat()
+    day_end = datetime(date_obj.year, date_obj.month, date_obj.day, 23, 59, 59, tzinfo=timezone.utc).isoformat()
+    taken_cursor = db.bookings.find({
+        "local": local,
+        "status": "marcada",
+        "data_hora": {"$gte": day_start, "$lte": day_end},
+    }, {"_id": 0, "data_hora": 1})
+    taken = set()
+    async for doc in taken_cursor:
+        try:
+            d = datetime.fromisoformat(doc["data_hora"])
+            taken.add((d.hour, d.minute))
+        except Exception:
+            pass
+
+    now_utc = datetime.now(timezone.utc)
+    slots_resp = []
+    for (h, m) in valid_slots:
+        slot_dt = datetime(date_obj.year, date_obj.month, date_obj.day, h, m, tzinfo=timezone.utc)
+        is_past = slot_dt < now_utc - timedelta(minutes=5)
+        slots_resp.append({
+            "hora": f"{h:02d}:{m:02d}",
+            "hora_fim": f"{(h if m+SLOT_MINUTES<60 else h+1):02d}:{((m+SLOT_MINUTES)%60):02d}",
+            "ocupada": (h, m) in taken,
+            "passada": is_past,
+        })
+
+    return {
+        "date": date,
+        "local": local,
+        "weekday": weekday,
+        "afternoon_only": weekday in AFTERNOON_ONLY_WEEKDAYS,
+        "slots": slots_resp,
+    }
 
 
 @api_router.get("/bookings", response_model=List[Booking])
