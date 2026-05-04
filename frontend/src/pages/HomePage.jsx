@@ -1,9 +1,18 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
-import { LogIn, LogOut, ShieldCheck, ArrowRight, Clock, Heart } from "lucide-react";
+import { useAuth } from "../lib/auth";
+import { LogIn, LogOut, ShieldCheck, ArrowRight, Heart, History } from "lucide-react";
 
 export default function HomePage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const goHistorico = () => {
+    if (user?.is_admin) navigate("/historico");
+    else navigate("/login?next=/historico");
+  };
+
   return (
     <div className="min-h-screen" data-testid="home-page">
       <Header />
@@ -52,12 +61,13 @@ export default function HomePage() {
 
         {/* Secondary features */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="card-crisp p-8 fade-in-up stagger-3" data-testid="feat-historico">
-            <Clock className="w-6 h-6 text-[#4A7C59] mb-4" />
+          <button onClick={goHistorico} className="card-crisp p-8 hover:-translate-y-1 transition-all fade-in-up stagger-3 text-left" data-testid="tile-historico">
+            <History className="w-7 h-7 text-[#4A7C59] mb-4" />
             <div className="label-up mb-2">Histórico</div>
-            <p className="text-[#1F2924] font-heading text-xl">Tudo o que acontece fica guardado e pesquisável por data e nome.</p>
-          </div>
-          <div className="card-crisp p-8 fade-in-up stagger-4" data-testid="feat-simples">
+            <p className="text-[#1F2924] font-heading text-xl mb-3">Ver todos os registos anteriores.</p>
+            <span className="text-sm text-[#5C6B62]">Acesso protegido por login de administrador →</span>
+          </button>
+          <div className="card-crisp p-8 fade-in-up stagger-3" data-testid="feat-simples">
             <Heart className="w-6 h-6 text-[#C26D5C] mb-4" />
             <div className="label-up mb-2">Simples</div>
             <p className="text-[#1F2924] font-heading text-xl">Grandes botões, letras legíveis — pensado para todas as idades.</p>

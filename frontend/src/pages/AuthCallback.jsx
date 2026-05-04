@@ -29,7 +29,11 @@ export default function AuthCallback() {
         if (res.data.session_token) localStorage.setItem("session_token", res.data.session_token);
         setUser(res.data.user);
         toast.success("Sessão iniciada");
-        if (res.data.user?.is_admin) {
+        const params = new URLSearchParams(window.location.search);
+        const next = params.get("next");
+        if (next) {
+          navigate(next, { replace: true });
+        } else if (res.data.user?.is_admin) {
           navigate("/dashboard", { replace: true });
         } else {
           navigate("/", { replace: true });

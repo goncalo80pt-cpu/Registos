@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Header from "../components/Header";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import { api } from "../lib/api";
 import { toast } from "sonner";
@@ -8,6 +8,8 @@ import { ShieldCheck, KeyRound } from "lucide-react";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const next = searchParams.get("next") || "/dashboard";
   const { setUser } = useAuth();
   const [tab, setTab] = useState("google");
   const [email, setEmail] = useState("");
@@ -16,7 +18,7 @@ export default function LoginPage() {
 
   // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
   const loginGoogle = () => {
-    const redirectUrl = window.location.origin + "/auth/callback";
+    const redirectUrl = window.location.origin + "/auth/callback?next=" + encodeURIComponent(next);
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
@@ -28,7 +30,7 @@ export default function LoginPage() {
       if (res.data.session_token) localStorage.setItem("session_token", res.data.session_token);
       setUser(res.data.user);
       toast.success("Sessão iniciada");
-      navigate("/dashboard", { replace: true });
+      navigate(next, { replace: true });
     } catch (e) {
       toast.error(e?.response?.data?.detail || "Credenciais inválidas");
     } finally {

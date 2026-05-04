@@ -46,7 +46,7 @@ export default function HistoryPage() {
 
   useEffect(() => {
     if (loading) return;
-    if (!user || !user.is_admin) { navigate("/login", { replace: true }); return; }
+    if (!user || !user.is_admin) { navigate("/login?next=/historico", { replace: true }); return; }
     load();
   }, [user, loading, load, navigate]);
 
