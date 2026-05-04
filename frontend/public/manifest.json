@@ -1,0 +1,53 @@
+{
+  "name": "centro.social.de.brito.Registos",
+  "short_name": "Registos CSB",
+  "description": "Centro Social de Brito — Registo de visitas, marcações e histórico",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F9F8F6",
+  "theme_color": "#4A7C59",
+  "lang": "pt-PT",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Entrada",
+      "short_name": "Entrada",
+      "description": "Registar entrada de visitante",
+      "url": "/entrada",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Saída",
+      "short_name": "Saída",
+      "url": "/saida",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Marcar visita",
+      "short_name": "Marcar",
+      "url": "/marcar",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

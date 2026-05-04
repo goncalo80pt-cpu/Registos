@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
 import UpcomingReminder from "@/components/UpcomingReminder";
+import InstallPrompt from "@/components/InstallPrompt";
 import HomePage from "@/pages/HomePage";
 import CheckinPage from "@/pages/CheckinPage";
 import CheckoutPage from "@/pages/CheckoutPage";
@@ -19,6 +20,7 @@ function AppRouter() {
   return (
     <>
       <UpcomingReminder />
+      <InstallPrompt />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/entrada" element={<CheckinPage />} />
