@@ -65,7 +65,7 @@ export default function HomePage() {
             <History className="w-7 h-7 text-[#4A7C59] mb-4" />
             <div className="label-up mb-2">Histórico</div>
             <p className="text-[#1F2924] font-heading text-xl mb-3">Ver todos os registos anteriores.</p>
-            <span className="text-sm text-[#5C6B62]">Acesso protegido por login de administrador →</span>
+            <span className="text-sm text-[#5C6B62]">Guardado durante 1 ano · acesso protegido →</span>
           </button>
           <div className="card-crisp p-8 fade-in-up stagger-3" data-testid="feat-simples">
             <Heart className="w-6 h-6 text-[#C26D5C] mb-4" />

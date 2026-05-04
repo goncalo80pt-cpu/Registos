@@ -244,6 +244,8 @@ async def checkin(payload: VisitCreate):
     doc = visit.model_dump()
     doc["entrada"] = doc["entrada"].isoformat()
     doc["saida"] = None
+    # expires_at is a BSON Date used by MongoDB's TTL index to auto-delete after 1 year
+    doc["expires_at"] = visit.entrada + timedelta(days=365)
     await db.visits.insert_one(doc)
     return visit
 
@@ -389,6 +391,37 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+@app.on_event("startup")
+async def setup_indexes():
+    # TTL index: MongoDB automatically deletes a visit when its `expires_at` is reached.
+    # We set expires_at = entrada + 365 days, so records survive for 1 full year and are then purged.
+    try:
+        await db.visits.create_index("expires_at", expireAfterSeconds=0)
+    except Exception as e:
+        logger.warning(f"Failed to create TTL index: {e}")
+    # Backfill existing visits (created before this feature) so they also get auto-deleted 1 year after entrada
+    try:
+        cursor = db.visits.find({"expires_at": {"$exists": False}}, {"_id": 1, "visit_id": 1, "entrada": 1})
+        async for d in cursor:
+            entrada = d.get("entrada")
+            if isinstance(entrada, str):
+                try:
+                    entrada_dt = datetime.fromisoformat(entrada)
+                except Exception:
+                    continue
+            else:
+                entrada_dt = entrada
+            if entrada_dt and entrada_dt.tzinfo is None:
+                entrada_dt = entrada_dt.replace(tzinfo=timezone.utc)
+            if entrada_dt:
+                await db.visits.update_one(
+                    {"_id": d["_id"]},
+                    {"$set": {"expires_at": entrada_dt + timedelta(days=365)}},
+                )
+    except Exception as e:
+        logger.warning(f"Failed to backfill expires_at: {e}")
 
 
 @app.on_event("shutdown")
