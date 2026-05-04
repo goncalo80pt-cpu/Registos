@@ -21,11 +21,13 @@ export default function Header({ minimal = false }) {
     <header className="crystal-glass sticky top-0 z-50" data-testid="app-header">
       <div className="max-w-7xl mx-auto flex items-center justify-between px-6 md:px-10 py-5">
         <Link to="/" className="flex items-center gap-3" data-testid="brand-link">
-          <div className="w-10 h-10 rounded-xl bg-[#4A7C59] flex items-center justify-center text-white font-heading text-xl font-semibold">
-            R
+          <div className="w-10 h-10 rounded-xl bg-[#4A7C59] flex items-center justify-center text-white font-heading text-xl font-semibold shrink-0">
+            C
           </div>
-          <div className="leading-tight">
-            <div className="font-heading font-medium text-lg text-[#1F2924]">RegistoVisitas</div>
+          <div className="leading-tight min-w-0">
+            <div className="font-heading font-medium text-base sm:text-lg text-[#1F2924] truncate">
+              centro.social.de.brito<span className="text-[#4A7C59]">.Registos</span>
+            </div>
             <div className="label-up text-[10px]">Entrada · Saída</div>
           </div>
         </Link>

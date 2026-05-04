@@ -292,7 +292,7 @@ async def history(
         if data_fim:
             rng["$lte"] = data_fim + "T23:59:59"
         query["entrada"] = rng
-    docs = await db.visits.find(query, {"_id": 0}).sort("entrada", -1).to_list(5000)
+    docs = await db.visits.find(query, {"_id": 0}).sort("entrada", -1).to_list(length=None)
     return [_visit_from_doc(d) for d in docs]
 
 
@@ -339,7 +339,8 @@ async def stats(request: Request, authorization: Optional[str] = Header(None)):
 @api_router.get("/visits/export")
 async def export_csv(request: Request, authorization: Optional[str] = Header(None)):
     await require_admin(request, authorization)
-    docs = await db.visits.find({}, {"_id": 0}).sort("entrada", -1).to_list(10000)
+    # Export ALL records - history is permanent
+    docs = await db.visits.find({}, {"_id": 0}).sort("entrada", -1).to_list(length=None)
 
     buf = io.StringIO()
     writer = csv.writer(buf, delimiter=";")
