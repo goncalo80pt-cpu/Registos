@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
-import { LogOut, LayoutDashboard, History, LogIn, CalendarDays, CalendarRange } from "lucide-react";
+import { LogOut, LayoutDashboard, History, LogIn, CalendarDays, CalendarRange, Users } from "lucide-react";
 
 export default function Header({ minimal = false }) {
   const { user, logout } = useAuth();
@@ -49,6 +49,9 @@ export default function Header({ minimal = false }) {
                 </button>
                 <button onClick={() => navigate('/marcacoes')} className={`btn-ghost px-4 py-2 text-sm flex items-center gap-2 ${location.pathname==='/marcacoes'?'bg-[#F1F2F0]':''}`} data-testid="nav-marcacoes">
                   <CalendarDays className="w-4 h-4" /><span className="hidden sm:inline">Marcações</span>
+                </button>
+                <button onClick={() => navigate('/utentes')} className={`btn-ghost px-4 py-2 text-sm flex items-center gap-2 ${location.pathname==='/utentes'?'bg-[#F1F2F0]':''}`} data-testid="nav-utentes">
+                  <Users className="w-4 h-4" /><span className="hidden sm:inline">Utentes</span>
                 </button>
                 <button onClick={() => navigate('/historico')} className={`btn-ghost px-4 py-2 text-sm flex items-center gap-2 ${location.pathname==='/historico'?'bg-[#F1F2F0]':''}`} data-testid="nav-history">
                   <History className="w-4 h-4" /><span className="hidden sm:inline">Histórico</span>

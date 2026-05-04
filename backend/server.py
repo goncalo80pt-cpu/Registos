@@ -91,6 +91,18 @@ class Booking(BaseModel):
     created_at: datetime
 
 
+class UtenteCreate(BaseModel):
+    nome: str
+    local: str  # one of VALID_LOCATIONS keys
+
+
+class Utente(BaseModel):
+    utente_id: str
+    nome: str
+    local: str
+    created_at: datetime
+
+
 class Visit(BaseModel):
     visit_id: str
     instituicao: str
@@ -642,6 +654,79 @@ async def get_locations():
     return [{"key": k, "label": v} for k, v in VALID_LOCATIONS.items()]
 
 
+# ----------------- Utentes (residentes) -----------------
+def _utente_from_doc(doc: dict) -> Utente:
+    v = doc.get("created_at")
+    if isinstance(v, str):
+        try:
+            doc["created_at"] = datetime.fromisoformat(v)
+        except Exception:
+            doc["created_at"] = datetime.now(timezone.utc)
+    return Utente(**doc)
+
+
+@api_router.get("/utentes", response_model=List[Utente])
+async def list_utentes(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+    local: Optional[str] = None,
+    nome: Optional[str] = None,
+):
+    await require_admin(request, authorization)
+    query: dict = {}
+    if local in VALID_LOCATIONS:
+        query["local"] = local
+    if nome:
+        query["nome"] = {"$regex": nome, "$options": "i"}
+    docs = await db.utentes.find(query, {"_id": 0}).sort("nome", 1).to_list(length=None)
+    return [_utente_from_doc(d) for d in docs]
+
+
+@api_router.post("/utentes", response_model=Utente)
+async def create_utente(payload: UtenteCreate, request: Request, authorization: Optional[str] = Header(None)):
+    await require_admin(request, authorization)
+    if payload.local not in VALID_LOCATIONS:
+        raise HTTPException(status_code=400, detail="Local inválido")
+    nome = (payload.nome or "").strip()
+    if not nome:
+        raise HTTPException(status_code=400, detail="Nome obrigatório")
+    utente = {
+        "utente_id": f"u_{uuid.uuid4().hex[:12]}",
+        "nome": nome,
+        "local": payload.local,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.utentes.insert_one(utente.copy())
+    return _utente_from_doc(utente)
+
+
+@api_router.put("/utentes/{utente_id}", response_model=Utente)
+async def update_utente(utente_id: str, payload: UtenteCreate, request: Request, authorization: Optional[str] = Header(None)):
+    await require_admin(request, authorization)
+    if payload.local not in VALID_LOCATIONS:
+        raise HTTPException(status_code=400, detail="Local inválido")
+    nome = (payload.nome or "").strip()
+    if not nome:
+        raise HTTPException(status_code=400, detail="Nome obrigatório")
+    res = await db.utentes.update_one(
+        {"utente_id": utente_id},
+        {"$set": {"nome": nome, "local": payload.local}},
+    )
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Utente não encontrado")
+    doc = await db.utentes.find_one({"utente_id": utente_id}, {"_id": 0})
+    return _utente_from_doc(doc)
+
+
+@api_router.delete("/utentes/{utente_id}")
+async def delete_utente(utente_id: str, request: Request, authorization: Optional[str] = Header(None)):
+    await require_admin(request, authorization)
+    res = await db.utentes.delete_one({"utente_id": utente_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Utente não encontrado")
+    return {"ok": True}
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -695,6 +780,26 @@ async def setup_indexes():
                 )
     except Exception as e:
         logger.warning(f"Failed to backfill expires_at: {e}")
+    # Seed utentes (residents) if collection empty
+    try:
+        from utentes_seed import UTENTES_SEED
+        existing = await db.utentes.count_documents({})
+        if existing == 0:
+            now_iso = datetime.now(timezone.utc).isoformat()
+            docs = []
+            for local_key, names in UTENTES_SEED.items():
+                for nome in names:
+                    docs.append({
+                        "utente_id": f"u_{uuid.uuid4().hex[:12]}",
+                        "nome": nome,
+                        "local": local_key,
+                        "created_at": now_iso,
+                    })
+            if docs:
+                await db.utentes.insert_many(docs)
+                logger.info(f"Seeded {len(docs)} utentes.")
+    except Exception as e:
+        logger.warning(f"Failed to seed utentes: {e}")
 
 
 @app.on_event("shutdown")
