@@ -1,0 +1,86 @@
+{
+  "theme": "Light",
+  "archetype": "1 (Organic & Earthy)",
+  "vibe": "Trust, Growth, Calm. Institutional but warm and inviting, perfectly balancing the care for children and the elderly.",
+  "colors": {
+    "base_background": "#F9F8F6",
+    "surface_background": "#FFFFFF",
+    "primary_accent": "#4A7C59",
+    "secondary_accent": "#C26D5C",
+    "text_main": "#1F2924",
+    "text_muted": "#5C6B62",
+    "border_color": "#E5E7E2",
+    "tinted_grey": "#F1F2F0"
+  },
+  "typography": {
+    "heading_font": "Outfit",
+    "body_font": "DM Sans",
+    "hierarchy": {
+      "h1": "text-5xl sm:text-6xl tracking-tight font-light",
+      "h2": "text-3xl sm:text-4xl tracking-tight font-medium",
+      "h3": "text-xl sm:text-2xl font-medium",
+      "body": "text-lg md:text-xl leading-relaxed",
+      "labels": "text-sm uppercase tracking-[0.2em] font-bold text-[#5C6B62]"
+    }
+  },
+  "spacing_and_layout": {
+    "philosophy": "Generous Spacing. Since this acts as a kiosk app, touch targets must be massive.",
+    "kiosk_layout": "Split screen (50/50). Left side is an emotional image with a subtle gradient overlay. Right side is the check-in/out form with p-12 to p-20 padding.",
+    "dashboard_layout": "The Control Room Grid (Bento Mode B). grid-cols-1 md:grid-cols-4 gap-6.",
+    "container_padding": "p-8 md:p-16",
+    "touch_targets": "Minimum h-16 for all inputs and buttons. Buttons should have p-6 or p-8."
+  },
+  "components": {
+    "cards": {
+      "style": "Neumorphism & Crisp. Flat background, 1px subtle border (#E5E7E2), soft shadow (shadow-sm). No heavy rounding, max rounded-xl."
+    },
+    "buttons": {
+      "primary": "bg-[#4A7C59] text-white hover:bg-[#3B6347] transition-all hover:-translate-y-1 rounded-lg font-medium",
+      "secondary": "bg-[#C26D5C] text-white hover:bg-[#A35B4C] transition-all hover:-translate-y-1 rounded-lg font-medium",
+      "ghost": "bg-transparent text-[#1F2924] border border-[#E5E7E2] hover:bg-[#F1F2F0] rounded-lg"
+    },
+    "inputs": {
+      "style": "h-16 text-xl rounded-lg border-[#E5E7E2] bg-[#FFFFFF] focus:ring-2 focus:ring-[#4A7C59] focus:border-transparent transition-all"
+    },
+    "header": {
+      "style": "Crystal Glass: bg-[#F9F8F6]/80 backdrop-blur-xl border-b border-[#E5E7E2]/50 z-50 sticky top-0"
+    }
+  },
+  "motion_and_interactions": {
+    "hover_states": "All buttons must lift (-translate-y-1) and cast a slightly larger shadow.",
+    "page_transitions": "Fade in and slide up for forms (Framer Motion: initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}).",
+    "focus_states": "Inputs must have a visible ring-2 of the primary accent color. Accessibility is paramount."
+  },
+  "icons": {
+    "library": "lucide-react",
+    "sizing": "w-8 h-8 for kiosk buttons, w-5 h-5 for dashboard data."
+  },
+  "media_urls": [
+    {
+      "category": "hero_elderly_lar",
+      "url": "https://images.unsplash.com/photo-1773227059780-5e865ce7fb13?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTN8MHwxfHNlYXJjaHwyfHxoYXBweSUyMGVsZGVybHklMjBjYXJlfGVufDB8fHx8MTc3Nzg4NTI5MXww&ixlib=rb-4.1.0&q=85",
+      "description": "Elderly people enjoying a social gathering indoors."
+    },
+    {
+      "category": "hero_children_creche",
+      "url": "https://images.unsplash.com/photo-1777056491418-d4ff81a4ad92?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzd8MHwxfHNlYXJjaHwxfHxraW5kZXJnYXJ0ZW4lMjBjaGlsZHJlbiUyMHBsYXl8ZW58MHx8fHwxNzc3ODg1MjkwfDA&ixlib=rb-4.1.0&q=85",
+      "description": "Young children sitting at a table in a classroom."
+    },
+    {
+      "category": "admin_dashboard_background",
+      "url": "https://images.unsplash.com/photo-1758448511255-ac2a24a135d7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjByZWNlcHRpb24lMjBkZXNrJTIwYnJpZ2h0fGVufDB8fHx8MTc3Nzg4NTI5MXww&ixlib=rb-4.1.0&q=85",
+      "description": "Modern lounge area with contemporary furniture and large windows."
+    }
+  ],
+  "specific_instructions_to_main_agent": [
+    "Language MUST be Portuguese (pt-PT). e.g., 'Entrada', 'Saída', 'Visitante', 'Motivo', 'Observações'.",
+    "Create a toggle or selection at the start of Check-in to choose between 'Creche/Infantário' and 'Lar de Idosos'. Swap the hero image based on this selection.",
+    "Implement Google Login for Admin.",
+    "Form inputs must be massive (h-16, text-lg or text-xl) since this will run on a tablet at a reception desk.",
+    "Dashboard MUST use a Bento Grid layout for statistics (visitors inside, average time, total today).",
+    "History table must support CSV Export.",
+    "Use Shadcn UI for forms, tables, dialogs, and toasts, but customize the paddings to match the 'Generous Spacing' philosophy.",
+    "For Kiosk pages (Entrada/Saída), do not use a standard navigation bar. Use a 'Crystal Glass' minimal header just showing the Institution Name and a subtle clock.",
+    "All interactive elements MUST have data-testid attribute (e.g., data-testid='btn-checkin-lar')."
+  ]
+}
