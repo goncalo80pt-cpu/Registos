@@ -29,8 +29,8 @@ ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')
 # scopes: "all" para super-admin, ou lista de locais que pode ver/gerir
 ADMIN_USERS = [
     {"name": "Erpi Sede", "password": "sede123", "scopes": ["erpi_sede", "secretaria_sede"]},
-    {"name": "Erpi Parais", "password": "paraiso123", "scopes": ["erpi_parais", "secretaria_paraiso"]},
-    {"name": "Lar Residencial", "password": "larresidencial123", "scopes": ["lar_residencial"]},
+    {"name": "Erpi Paraíso", "password": "paraiso123", "scopes": ["erpi_parais", "secretaria_paraiso"]},
+    {"name": "Lar Residencial", "password": "residencial123", "scopes": ["lar_residencial"]},
     {"name": "Admin", "password": "admin2026", "scopes": "all"},
 ]
 
@@ -462,6 +462,45 @@ async def stats(request: Request, authorization: Optional[str] = Header(None)):
         c = await db.visits.count_documents(_q({"entrada": {"$gte": d, "$lt": d + "T23:59:59"}}))
         last7.append({"dia": d, "total": c})
 
+    # Saídas de utentes em atraso (status em_curso e regresso_previsto < agora)
+    now_iso = now.isoformat()
+    saidas_scope = dict(_scope_query(user, "local"))
+    saidas_scope["status"] = "em_curso"
+    saidas_scope["regresso_previsto"] = {"$lt": now_iso}
+    overdue_docs = await db.saidas.find(saidas_scope, {"_id": 0}).sort("regresso_previsto", 1).to_list(length=None)
+    saidas_em_atraso = [{
+        "saida_id": d.get("saida_id"),
+        "utente_nome": d.get("utente_nome", ""),
+        "local": d.get("local", ""),
+        "local_label": VALID_LOCATIONS.get(d.get("local", ""), d.get("local", "")),
+        "motivo": d.get("motivo", ""),
+        "regresso_previsto": d.get("regresso_previsto"),
+        "saida_real": d.get("saida_real"),
+        "responsavel_nome": d.get("responsavel_nome"),
+        "responsavel_telefone": d.get("responsavel_telefone"),
+    } for d in overdue_docs]
+
+    # Top utentes mais visitados no mês corrente (agrupado por utente_id ou pessoa_visitada)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).strftime("%Y-%m-%d")
+    pipeline_top = [
+        {"$match": _q({"entrada": {"$gte": month_start}})},
+        {"$group": {
+            "_id": {"$ifNull": ["$utente_id", "$pessoa_visitada"]},
+            "nome": {"$first": "$pessoa_visitada"},
+            "local": {"$first": "$instituicao"},
+            "total": {"$sum": 1},
+        }},
+        {"$sort": {"total": -1, "nome": 1}},
+        {"$limit": 10},
+    ]
+    top_agg = await db.visits.aggregate(pipeline_top).to_list(10)
+    top_utentes_mes = [{
+        "nome": x.get("nome") or "—",
+        "local": x.get("local") or "",
+        "local_label": VALID_LOCATIONS.get(x.get("local") or "", ""),
+        "total": x.get("total", 0),
+    } for x in top_agg]
+
     return {
         "total": total,
         "dentro": dentro,
@@ -471,6 +510,8 @@ async def stats(request: Request, authorization: Optional[str] = Header(None)):
         "tempo_medio_min": avg_minutes,
         "ultimos_7_dias": last7,
         "por_local": por_local,
+        "saidas_em_atraso": saidas_em_atraso,
+        "top_utentes_mes": top_utentes_mes,
     }
 
 

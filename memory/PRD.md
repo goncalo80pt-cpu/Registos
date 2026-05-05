@@ -27,6 +27,10 @@
 - [x] **Rebrand** para `centro.social.de.brito.Registos` (header + title da aba)
 - [x] **Histórico permanente**: `to_list(length=None)` em `/api/visits/history` e `/api/visits/export` — sem qualquer limite de registos. MongoDB não tem TTL configurado, pelo que os dados ficam guardados indefinidamente.
 
+## Implemented (2026-05-05)
+- [x] **Alerta de saídas em atraso no Dashboard**: GET `/api/visits/stats` agora devolve `saidas_em_atraso` (status=em_curso e regresso_previsto < agora, filtrado por scope). Dashboard mostra card vermelho destacado, com nome, motivo, hora prevista, contacto do acompanhante e CTA "Registar regresso". Refresca automaticamente a cada 60s.
+- [x] **Top utentes mais visitados do mês**: GET `/api/visits/stats` agora devolve `top_utentes_mes` (agregado por `utente_id` ou `pessoa_visitada`, mês corrente, top 10, scope-aware). Dashboard renderiza lista ranqueada com barra de progresso e etiqueta de local.
+
 ## Backlog
 - **P1**: Substituir date inputs nativos por shadcn Calendar em `/historico`.
 - **P1**: Multi-tenant (várias instituições com o mesmo deploy).
