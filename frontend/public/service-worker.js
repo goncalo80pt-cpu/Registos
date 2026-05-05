@@ -2,7 +2,7 @@
  * - Caches static assets for offline shell
  * - Network-first for API calls (always fresh data when online)
  */
-const CACHE_NAME = "csb-registos-v1";
+const CACHE_NAME = "csb-registos-v3";
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",
@@ -54,7 +54,23 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first for static assets
+  // Network-first for JS/CSS assets so updates are picked up immediately when online
+  if (url.pathname.endsWith(".js") || url.pathname.endsWith(".css")) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res && res.status === 200 && res.type === "basic") {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(req, copy)).catch(() => {});
+          }
+          return res;
+        })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // Cache-first for other static assets (images, fonts, icons)
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;
