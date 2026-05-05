@@ -2,7 +2,7 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import { useAuth } from "../lib/auth";
-import { LogIn, LogOut, ShieldCheck, ArrowRight, History, CalendarPlus } from "lucide-react";
+import { ShieldCheck, ArrowRight, History, CalendarPlus } from "lucide-react";
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -37,42 +37,18 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Main action tiles */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-8">
-          <Link to="/entrada" className="group card-crisp p-8 md:p-10 transition-all hover:-translate-y-1 hover:shadow-lg fade-in-up stagger-1" data-testid="tile-entrada">
+        {/* Main action tile */}
+        <section className="grid grid-cols-1 mb-8">
+          <Link to="/marcar" className="group card-crisp p-10 md:p-14 transition-all hover:-translate-y-1 hover:shadow-lg fade-in-up stagger-1" data-testid="tile-marcar">
             <div className="flex items-start justify-between mb-8">
-              <div className="w-14 h-14 rounded-2xl bg-[#4A7C59] text-white flex items-center justify-center">
-                <LogIn className="w-7 h-7" />
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-[#1F2924] text-white flex items-center justify-center">
+                <CalendarPlus className="w-8 h-8 md:w-10 md:h-10" />
               </div>
-              <ArrowRight className="w-6 h-6 text-[#5C6B62] group-hover:translate-x-2 group-hover:text-[#4A7C59] transition-all" />
-            </div>
-            <div className="label-up mb-3">Passo 1</div>
-            <h2 className="font-heading text-3xl md:text-4xl font-medium text-[#1F2924] mb-3">Entrada</h2>
-            <p className="text-base text-[#5C6B62] leading-relaxed">Registe a hora de chegada e a quem vem visitar.</p>
-          </Link>
-
-          <Link to="/saida" className="group card-crisp p-8 md:p-10 transition-all hover:-translate-y-1 hover:shadow-lg fade-in-up stagger-2" data-testid="tile-saida">
-            <div className="flex items-start justify-between mb-8">
-              <div className="w-14 h-14 rounded-2xl bg-[#C26D5C] text-white flex items-center justify-center">
-                <LogOut className="w-7 h-7" />
-              </div>
-              <ArrowRight className="w-6 h-6 text-[#5C6B62] group-hover:translate-x-2 group-hover:text-[#C26D5C] transition-all" />
-            </div>
-            <div className="label-up mb-3">Ao terminar</div>
-            <h2 className="font-heading text-3xl md:text-4xl font-medium text-[#1F2924] mb-3">Saída</h2>
-            <p className="text-base text-[#5C6B62] leading-relaxed">Um toque para registar a hora de saída.</p>
-          </Link>
-
-          <Link to="/marcar" className="group card-crisp p-8 md:p-10 transition-all hover:-translate-y-1 hover:shadow-lg fade-in-up stagger-3" data-testid="tile-marcar">
-            <div className="flex items-start justify-between mb-8">
-              <div className="w-14 h-14 rounded-2xl bg-[#1F2924] text-white flex items-center justify-center">
-                <CalendarPlus className="w-7 h-7" />
-              </div>
-              <ArrowRight className="w-6 h-6 text-[#5C6B62] group-hover:translate-x-2 group-hover:text-[#1F2924] transition-all" />
+              <ArrowRight className="w-7 h-7 text-[#5C6B62] group-hover:translate-x-2 group-hover:text-[#1F2924] transition-all" />
             </div>
             <div className="label-up mb-3">Antes da visita</div>
-            <h2 className="font-heading text-3xl md:text-4xl font-medium text-[#1F2924] mb-3">Marcar visita</h2>
-            <p className="text-base text-[#5C6B62] leading-relaxed">Escolha o dia e a hora para visitar o seu familiar.</p>
+            <h2 className="font-heading text-4xl md:text-5xl font-medium text-[#1F2924] mb-3">Marcar visita</h2>
+            <p className="text-base md:text-lg text-[#5C6B62] leading-relaxed max-w-2xl">Escolha o dia e a hora para visitar o seu familiar.</p>
           </Link>
         </section>
 
