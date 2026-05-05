@@ -1,6 +1,7 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import Header from "../components/Header";
-import { Phone, Clock, ScrollText, Info } from "lucide-react";
+import { Phone, Clock, ScrollText, Info, CalendarPlus, ArrowRight } from "lucide-react";
 
 const REGULATION_RULES = [
   "As visitas devem ser agendadas previamente, entre as 09h00 e as 18h00, por telefone (ERPI Brito – 253 572 414; ERPI Polo do Paraíso e Lar Residencial – 253 084 588).",
@@ -44,6 +45,26 @@ export default function HomePage() {
               data-testid="home-logo"
             />
           </div>
+        </section>
+
+        <section className="mb-10 sm:mb-14 fade-in-up">
+          <Link
+            to="/marcar"
+            className="group block card-crisp p-6 sm:p-8 md:p-10 transition-all hover:-translate-y-1 hover:shadow-lg"
+            data-testid="tile-marcar"
+          >
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#1F2924] text-white flex items-center justify-center shrink-0">
+                <CalendarPlus className="w-7 h-7 sm:w-8 sm:h-8" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="label-up mb-1">Antes da visita</div>
+                <h2 className="font-heading text-xl sm:text-2xl md:text-3xl font-medium text-[#1F2924]">Marcar visita</h2>
+                <p className="text-sm sm:text-base text-[#5C6B62] mt-1">Escolha o dia e a hora para visitar o seu familiar.</p>
+              </div>
+              <ArrowRight className="w-6 h-6 text-[#5C6B62] group-hover:translate-x-2 group-hover:text-[#1F2924] transition-all shrink-0" />
+            </div>
+          </Link>
         </section>
 
         <section className="card-crisp p-6 sm:p-10 md:p-14 fade-in-up" data-testid="regulation-section">
