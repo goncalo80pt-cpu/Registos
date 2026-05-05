@@ -220,8 +220,13 @@ async def auth_session(response: Response, x_session_id: Optional[str] = Header(
 @api_router.post("/auth/admin-login")
 async def admin_login(payload: AdminLogin, response: Response):
     name_in = (payload.name or "").strip()
+    password_in = (payload.password or "").strip()
     matched = next(
-        (a for a in ADMIN_USERS if a["name"].lower() == name_in.lower() and a["password"] == payload.password),
+        (
+            a for a in ADMIN_USERS
+            if a["name"].lower() == name_in.lower()
+            and (a["password"] == password_in or a["password"].lower() == password_in.lower())
+        ),
         None,
     )
     if not matched:
