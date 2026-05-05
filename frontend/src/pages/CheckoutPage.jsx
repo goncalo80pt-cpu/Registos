@@ -60,7 +60,7 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen" data-testid="checkout-page">
       <Header minimal />
-      <main className="max-w-6xl mx-auto px-6 md:px-10 py-10 md:py-16 fade-in-up">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 md:px-10 py-6 sm:py-10 md:py-16 fade-in-up">
         <div className="mb-10">
           <div className="label-up mb-4">Registo de saída</div>
           <h1 className="font-heading text-4xl md:text-6xl font-light text-[#1F2924] mb-4">Quem está dentro</h1>

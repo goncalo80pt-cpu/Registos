@@ -17,11 +17,11 @@ export default function HomePage() {
     <div className="min-h-screen" data-testid="home-page">
       <Header />
 
-      <main className="max-w-7xl mx-auto px-6 md:px-10 pt-10 md:pt-20 pb-24">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 pt-6 sm:pt-10 md:pt-20 pb-16 sm:pb-24">
         <section className="grid grid-cols-12 gap-8 items-center mb-16 fade-in-up">
           <div className="col-span-12 lg:col-span-7">
             <div className="label-up mb-5" data-testid="home-eyebrow">Registo digital de visitas</div>
-            <h1 className="font-heading text-5xl sm:text-6xl lg:text-7xl tracking-tight font-light text-[#1F2924] leading-[1.05]">
+            <h1 className="font-heading text-3xl sm:text-5xl lg:text-6xl tracking-tight font-light text-[#1F2924] leading-[1.05]">
               Centro<br />
               Social<br />
               <span className="text-[#4A7C59]">de Brito</span>
@@ -47,7 +47,7 @@ export default function HomePage() {
               <ArrowRight className="w-7 h-7 text-[#5C6B62] group-hover:translate-x-2 group-hover:text-[#1F2924] transition-all" />
             </div>
             <div className="label-up mb-3">Antes da visita</div>
-            <h2 className="font-heading text-4xl md:text-5xl font-medium text-[#1F2924] mb-3">Marcar visita</h2>
+            <h2 className="font-heading text-2xl sm:text-3xl md:text-4xl font-medium text-[#1F2924] mb-3">Marcar visita</h2>
             <p className="text-base md:text-lg text-[#5C6B62] leading-relaxed max-w-2xl">Escolha o dia e a hora para visitar o seu familiar.</p>
           </Link>
         </section>

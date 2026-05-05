@@ -80,15 +80,15 @@ export default function HistoryPage() {
   return (
     <div className="min-h-screen" data-testid="history-page">
       <Header />
-      <main className="max-w-7xl mx-auto px-6 md:px-10 py-10 md:py-14 fade-in-up">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-6 sm:py-10 md:py-14 fade-in-up">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
           <div>
             <div className="label-up mb-3">Histórico</div>
-            <h1 className="font-heading text-4xl md:text-5xl font-light text-[#1F2924]">Todos os registos</h1>
+            <h1 className="font-heading text-2xl sm:text-3xl md:text-4xl font-light text-[#1F2924]">Todos os registos</h1>
           </div>
-          <button onClick={exportCsv} className="btn-primary px-6 py-4 flex items-center gap-3 self-start md:self-auto" data-testid="export-csv-btn">
-            <Download className="w-5 h-5" />
-            Exportar CSV
+          <button onClick={exportCsv} className="btn-primary px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-2 sm:gap-3 self-start md:self-auto text-sm sm:text-base shrink-0" data-testid="export-csv-btn">
+            <Download className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="whitespace-nowrap">Exportar CSV</span>
           </button>
         </div>
 

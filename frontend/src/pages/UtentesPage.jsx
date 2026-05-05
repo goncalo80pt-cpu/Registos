@@ -96,11 +96,11 @@ export default function UtentesPage() {
   return (
     <div className="min-h-screen" data-testid="utentes-page">
       <Header />
-      <main className="max-w-7xl mx-auto px-6 md:px-10 py-10 md:py-14 fade-in-up">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-6 sm:py-10 md:py-14 fade-in-up">
         <div className="flex items-end justify-between mb-8 gap-4 flex-wrap">
           <div>
             <div className="label-up mb-3">Administração</div>
-            <h1 className="font-heading text-4xl md:text-5xl font-light text-[#1F2924]">Lista de utentes</h1>
+            <h1 className="font-heading text-2xl sm:text-3xl md:text-4xl font-light text-[#1F2924]">Lista de utentes</h1>
             <p className="text-[#5C6B62] mt-2">{list.length} utentes na lista</p>
           </div>
           <button onClick={() => setShowAdd(s => !s)} className="btn-primary px-5 py-3 flex items-center gap-2 self-start" data-testid="add-utente-btn">

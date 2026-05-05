@@ -80,7 +80,7 @@ export default function CheckinPage() {
         <div className="p-8 md:p-12 lg:p-20 fade-in-up">
           <div className="max-w-xl">
             <div className="label-up mb-4">Registo de entrada</div>
-            <h1 className="font-heading text-4xl md:text-5xl font-light text-[#1F2924] mb-10">Vamos começar</h1>
+            <h1 className="font-heading text-2xl sm:text-3xl md:text-4xl font-light text-[#1F2924] mb-10">Vamos começar</h1>
 
             <div className="mb-10">
               <div className="label-up mb-4">Local da visita</div>
