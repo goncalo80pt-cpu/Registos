@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import Header from "../components/Header";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
+import { useAuth } from "../lib/auth";
 import { toast } from "sonner";
 import { CalendarDays, Check, Building2, Clock, AlertCircle } from "lucide-react";
 
@@ -15,6 +16,7 @@ const WEEKDAYS_PT = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira",
 
 export default function BookingPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [locations, setLocations] = useState([]);
   const [local, setLocal] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -36,6 +38,20 @@ export default function BookingPage() {
   useEffect(() => {
     api.get("/locations").then(r => setLocations(r.data)).catch(() => {});
   }, []);
+
+  // If a scoped admin is logged in, auto-pick their location (primary residential first) and hide the selector.
+  const adminScopes = user?.is_admin && Array.isArray(user?.scopes) ? user.scopes : null;
+  const hideLocalPicker = !!adminScopes && adminScopes.length > 0;
+  const adminPrimaryLocal = useMemo(() => {
+    if (!adminScopes || adminScopes.length === 0) return null;
+    // prefer residential locations (erpi_*, lar_*) over secretaria_*
+    const residential = adminScopes.find(s => !s.startsWith("secretaria_"));
+    return residential || adminScopes[0];
+  }, [adminScopes]);
+
+  useEffect(() => {
+    if (adminPrimaryLocal && !local) setLocal(adminPrimaryLocal);
+  }, [adminPrimaryLocal, local]);
 
   // Load utentes whenever local changes
   useEffect(() => {
@@ -118,23 +134,37 @@ export default function BookingPage() {
         </div>
 
         <form onSubmit={submit} className="card-crisp p-8 md:p-10 space-y-7" data-testid="booking-form">
-          <div>
-            <div className="label-up mb-3">Local</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {locations.map(loc => (
-                <button
-                  key={loc.key}
-                  type="button"
-                  onClick={() => setLocal(loc.key)}
-                  className={`p-4 rounded-xl border-2 text-left transition-all ${local === loc.key ? "border-[#4A7C59] bg-[#F1F2F0]" : "border-[#E5E7E2] hover:border-[#4A7C59]/60"}`}
-                  data-testid={`booking-local-${loc.key}`}
-                >
-                  <Building2 className={`w-5 h-5 mb-2 ${local === loc.key ? "text-[#4A7C59]" : "text-[#5C6B62]"}`} />
-                  <div className="font-heading font-medium leading-tight">{loc.label}</div>
-                </button>
-              ))}
+          {hideLocalPicker ? (
+            <div className="flex items-center gap-3 p-3 sm:p-4 rounded-xl bg-[#F1F2F0] border border-[#E5E7E2]" data-testid="booking-local-fixed">
+              <div className="w-10 h-10 rounded-xl bg-[#4A7C59]/10 flex items-center justify-center text-[#4A7C59] shrink-0">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="label-up">Local</div>
+                <div className="font-heading text-base sm:text-lg text-[#1F2924] truncate">
+                  {locations.find(l => l.key === local)?.label || "..."}
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div>
+              <div className="label-up mb-3">Local</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {locations.map(loc => (
+                  <button
+                    key={loc.key}
+                    type="button"
+                    onClick={() => setLocal(loc.key)}
+                    className={`p-4 rounded-xl border-2 text-left transition-all ${local === loc.key ? "border-[#4A7C59] bg-[#F1F2F0]" : "border-[#E5E7E2] hover:border-[#4A7C59]/60"}`}
+                    data-testid={`booking-local-${loc.key}`}
+                  >
+                    <Building2 className={`w-5 h-5 mb-2 ${local === loc.key ? "text-[#4A7C59]" : "text-[#5C6B62]"}`} />
+                    <div className="font-heading font-medium leading-tight">{loc.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="label-up mb-2 block">Dia *</label>

@@ -45,6 +45,20 @@ export default function SaidasPage() {
     ? Object.entries(locations).filter(([k]) => userScopes.includes(k))
     : Object.entries(locations);
 
+  // Scoped admin → auto-pick local
+  const adminScopes = user?.is_admin && Array.isArray(user?.scopes) ? user.scopes : null;
+  const hideLocalPicker = !!adminScopes && adminScopes.length > 0;
+  const adminPrimaryLocal = (() => {
+    if (!adminScopes || adminScopes.length === 0) return "";
+    return adminScopes.find(s => !s.startsWith("secretaria_")) || adminScopes[0];
+  })();
+
+  useEffect(() => {
+    if (hideLocalPicker && !form.local && adminPrimaryLocal) {
+      setForm(f => ({ ...f, local: adminPrimaryLocal }));
+    }
+  }, [hideLocalPicker, adminPrimaryLocal, form.local]);
+
   const load = useCallback(async () => {
     setFetching(true);
     try {
@@ -139,14 +153,16 @@ export default function SaidasPage() {
           <form onSubmit={submit} className="card-crisp p-6 md:p-8 mb-6 space-y-5" data-testid="add-saida-form">
             <h2 className="font-heading text-xl text-[#1F2924] mb-2">Agendar saída</h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="label-up mb-2 block">Local</label>
-                <select className="input-kiosk !h-12 !text-base" style={{height:'3rem',fontSize:'1rem'}} value={form.local} onChange={e=>setForm({...form, local:e.target.value, utente_id:"", utente_search:""})} data-testid="saida-local">
-                  <option value="">Escolher...</option>
-                  {visibleLocations.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-                </select>
-              </div>
+            <div className={`grid grid-cols-1 ${hideLocalPicker ? "" : "md:grid-cols-2"} gap-4`}>
+              {!hideLocalPicker && (
+                <div>
+                  <label className="label-up mb-2 block">Local</label>
+                  <select className="input-kiosk !h-12 !text-base" style={{height:'3rem',fontSize:'1rem'}} value={form.local} onChange={e=>setForm({...form, local:e.target.value, utente_id:"", utente_search:""})} data-testid="saida-local">
+                    <option value="">Escolher...</option>
+                    {visibleLocations.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                  </select>
+                </div>
+              )}
               <div className="relative">
                 <label className="label-up mb-2 block">Utente</label>
                 <input
