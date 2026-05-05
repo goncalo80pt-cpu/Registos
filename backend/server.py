@@ -37,7 +37,7 @@ ADMIN_USERS = [
 # Locais de visita (substitui o antigo 'instituicao' creche/lar)
 VALID_LOCATIONS = {
     "erpi_sede": "Erpi Sede",
-    "erpi_parais": "Erpi Parais",
+    "erpi_parais": "Erpi Paraíso",
     "lar_residencial": "Lar Residencial",
     "secretaria_sede": "Secretaria Sede",
     "secretaria_paraiso": "Secretaria Paraíso",

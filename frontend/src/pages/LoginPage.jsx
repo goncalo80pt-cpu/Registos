@@ -49,7 +49,7 @@ export default function LoginPage() {
                   className="input-kiosk pl-12"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Erpi Sede / Erpi Parais / Lar Residencial / Admin"
+                  placeholder="Erpi Sede / Erpi Paraíso / Lar Residencial / Admin"
                   data-testid="admin-name"
                   autoComplete="username"
                   autoCapitalize="off"
