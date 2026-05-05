@@ -98,22 +98,27 @@ body {
     transform: translateY(-1px);
 }
 
-.input-kiosk {
-    height: 4rem;
-    font-size: 1.125rem;
-    border-radius: 0.5rem;
-    border: 1px solid var(--border);
-    background: #fff;
-    padding: 0 1rem;
-    width: 100%;
-    transition: box-shadow 0.2s ease, border-color 0.2s ease;
-    font-family: 'DM Sans', sans-serif;
-    color: var(--text-main);
-}
-.input-kiosk:focus {
-    outline: none;
-    border-color: transparent;
-    box-shadow: 0 0 0 2px var(--primary);
+@layer components {
+  .input-kiosk {
+      height: 4rem;
+      font-size: 1.125rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+      background: #fff;
+      padding-top: 0;
+      padding-bottom: 0;
+      padding-left: 1rem;
+      padding-right: 1rem;
+      width: 100%;
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text-main);
+  }
+  .input-kiosk:focus {
+      outline: none;
+      border-color: transparent;
+      box-shadow: 0 0 0 2px var(--primary);
+  }
 }
 
 .fade-in-up {
