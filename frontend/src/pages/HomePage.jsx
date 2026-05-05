@@ -34,7 +34,7 @@ export default function HomePage() {
             <h1 className="font-heading text-3xl sm:text-5xl lg:text-6xl tracking-tight font-light text-[#1F2924] leading-[1.05]">
               Centro<br />
               Social<br />
-              <span className="text-[#4A7C59]">de Brito</span>
+              <span className="text-[#2563EB]">de Brito</span>
             </h1>
           </div>
           <div className="col-span-12 lg:col-span-5 flex justify-center lg:justify-end">
