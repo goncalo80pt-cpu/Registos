@@ -30,6 +30,7 @@ ADMIN_USERS = [
     {"name": "Erpi Sede", "password": "sede123"},
     {"name": "Erpi Parais", "password": "paraiso123"},
     {"name": "Lar Residencial", "password": "larresidencial123"},
+    {"name": "Admin", "password": "admin2026"},
 ]
 
 # Locais de visita (substitui o antigo 'instituicao' creche/lar)
