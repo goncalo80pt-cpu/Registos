@@ -585,10 +585,13 @@ def slots_for_date(date_obj):
         start_h = AFTERNOON_START_HOUR
     else:
         start_h = NORMAL_START_HOUR
+    # Lunch break: skip 12:00, 12:30, 13:00, 13:30
+    LUNCH_BREAK = {(12, 0), (12, 30), (13, 0), (13, 30)}
     slots = []
     h, m = start_h, 0
     while (h, m) <= (LAST_SLOT_HOUR, LAST_SLOT_MIN):
-        slots.append((h, m))
+        if (h, m) not in LUNCH_BREAK:
+            slots.append((h, m))
         m += SLOT_MINUTES
         if m >= 60:
             h += 1
