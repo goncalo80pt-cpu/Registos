@@ -3,7 +3,7 @@ import Header from "../components/Header";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Calendar, Building2, Phone, X, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Building2, Phone, X, Check, Printer } from "lucide-react";
 import { toast } from "sonner";
 
 const WEEKDAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -68,6 +68,7 @@ export default function WeeklyAgendaPage() {
     setWeekStart(d);
   };
   const goToday = () => setWeekStart(startOfWeek(new Date()));
+  const printAgenda = () => window.print();
 
   const concluir = async (id) => {
     try { await api.post(`/bookings/${id}/conclude`); toast.success("Concluída"); load(); } catch { toast.error("Erro"); }
@@ -88,28 +89,48 @@ export default function WeeklyAgendaPage() {
 
   return (
     <div className="min-h-screen" data-testid="agenda-page">
-      <Header />
+      <div className="print:hidden">
+        <Header />
+      </div>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-6 sm:py-10 md:py-14 fade-in-up">
-        <div className="mb-6">
+        <div className="hidden print:block mb-6" data-testid="print-header">
+          <div className="text-center">
+            <div className="text-xs uppercase tracking-widest text-gray-600">Centro Social de Brito</div>
+            <div className="font-heading text-2xl font-light mt-1">Agenda da semana</div>
+            <div className="text-sm text-gray-700 mt-1">{shortDate(weekStart)} — {shortDate(weekEnd)}</div>
+          </div>
+        </div>
+
+        <div className="mb-6 print:hidden">
           <div className="label-up mb-3">Administração</div>
           <h1 className="font-heading text-2xl sm:text-3xl md:text-4xl font-light text-[#1F2924]">Agenda da semana</h1>
         </div>
 
-        <div className="flex items-center justify-between gap-4 mb-8 flex-wrap">
+        <div className="flex items-center justify-between gap-4 mb-8 flex-wrap print:hidden">
           <div className="flex items-center gap-2">
             <button onClick={() => moveWeek(-1)} className="btn-ghost p-3" data-testid="prev-week" title="Semana anterior"><ChevronLeft className="w-5 h-5" /></button>
             <button onClick={goToday} className="btn-ghost px-4 py-2 text-sm" data-testid="today-btn">Esta semana</button>
             <button onClick={() => moveWeek(1)} className="btn-ghost p-3" data-testid="next-week" title="Próxima semana"><ChevronRight className="w-5 h-5" /></button>
           </div>
-          <div className="font-heading text-xl text-[#1F2924]">
-            {shortDate(weekStart)} — {shortDate(weekEnd)}
+          <div className="flex items-center gap-3">
+            <div className="font-heading text-xl text-[#1F2924]">
+              {shortDate(weekStart)} — {shortDate(weekEnd)}
+            </div>
+            <button
+              onClick={printAgenda}
+              className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+              data-testid="print-agenda-btn"
+              title="Imprimir / Fotocopiar agenda"
+            >
+              <Printer className="w-4 h-4" /> Imprimir
+            </button>
           </div>
         </div>
 
         {fetching ? (
           <div className="card-crisp p-16 text-center text-[#5C6B62]">A carregar agenda...</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3" data-testid="week-grid">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 print:grid-cols-7 gap-3" data-testid="week-grid">
             {days.map((d, i) => {
               const key = fmtDate(d);
               const isToday = key === fmtDate(new Date());
@@ -154,7 +175,7 @@ export default function WeeklyAgendaPage() {
                             <div className="text-[#5C6B62] truncate" title={b.pessoa_visitada}>→ {b.pessoa_visitada}</div>
                             {b.telefone && <div className="text-[10px] text-[#5C6B62] flex items-center gap-1 mt-1"><Phone className="w-2.5 h-2.5" />{b.telefone}</div>}
                             {b.status === "marcada" && (
-                              <div className="flex gap-1 mt-2">
+                              <div className="flex gap-1 mt-2 print:hidden">
                                 <button onClick={() => concluir(b.booking_id)} className="text-[10px] px-2 py-1 rounded bg-[#4A7C59] text-white flex items-center gap-1" data-testid={`agenda-conclude-${b.booking_id}`}><Check className="w-3 h-3" />Concluir</button>
                                 <button onClick={() => cancelar(b.booking_id)} className="text-[10px] px-2 py-1 rounded bg-white border border-[#E5E7E2] text-[#5C6B62] flex items-center gap-1" data-testid={`agenda-cancel-${b.booking_id}`}><X className="w-3 h-3" />Cancelar</button>
                               </div>

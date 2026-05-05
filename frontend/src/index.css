@@ -134,6 +134,23 @@ body {
 .stagger-3 { animation-delay: 0.2s; opacity: 0; }
 .stagger-4 { animation-delay: 0.28s; opacity: 0; }
 
+/* Print styles for the weekly agenda (and any future printable pages) */
+@media print {
+    @page {
+        size: A4 landscape;
+        margin: 12mm;
+    }
+    html, body, #root {
+        background: #fff !important;
+    }
+    body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    /* Generic helper: anything inside a main with .fade-in-up should not animate while printing */
+    .fade-in-up { animation: none !important; opacity: 1 !important; }
+}
+
 @layer base {
     :root {
         --background: 43 20% 97%;
