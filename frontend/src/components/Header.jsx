@@ -59,9 +59,15 @@ export default function Header({ minimal = false }) {
               </>
             )}
             {user ? (
-              <button onClick={async()=>{await logout(); navigate('/');}} className="btn-ghost px-4 py-2 text-sm flex items-center gap-2" data-testid="logout-btn">
-                <LogOut className="w-4 h-4" /><span className="hidden sm:inline">Sair</span>
-              </button>
+              <>
+                <span className="hidden md:inline-flex items-center gap-1.5 text-xs text-[#5C6B62] px-2 py-1 bg-[#F1F2F0] rounded-md" data-testid="user-badge">
+                  <span className="w-2 h-2 rounded-full bg-[#4A7C59]" />
+                  {user.name}{user.scopes && user.scopes !== "all" ? "" : " · acesso total"}
+                </span>
+                <button onClick={async()=>{await logout(); navigate('/');}} className="btn-ghost px-4 py-2 text-sm flex items-center gap-2" data-testid="logout-btn">
+                  <LogOut className="w-4 h-4" /><span className="hidden sm:inline">Sair</span>
+                </button>
+              </>
             ) : (
               <button onClick={() => navigate('/login')} className="btn-primary px-4 py-2 text-sm flex items-center gap-2" data-testid="login-btn">
                 <LogIn className="w-4 h-4" /><span>Entrar (Admin)</span>

@@ -24,6 +24,11 @@ export default function UtentesPage() {
   const [editLocal, setEditLocal] = useState("");
 
   const locMap = locations.reduce((m, l) => ({ ...m, [l.key]: l.label }), {});
+  // Filter locations to user's scope (super-admin sees all)
+  const userScopes = user?.scopes;
+  const visibleLocations = (userScopes && userScopes !== "all" && Array.isArray(userScopes))
+    ? locations.filter(l => userScopes.includes(l.key))
+    : locations;
 
   const load = useCallback(async () => {
     setFetching(true);
@@ -113,7 +118,7 @@ export default function UtentesPage() {
               <label className="label-up mb-2 block">Local</label>
               <select className="input-kiosk !h-12 !text-base" style={{height:'3rem',fontSize:'1rem'}} value={newLocal} onChange={e=>setNewLocal(e.target.value)} data-testid="new-utente-local">
                 <option value="">Escolher...</option>
-                {locations.map(l => <option key={l.key} value={l.key}>{l.label}</option>)}
+                {visibleLocations.map(l => <option key={l.key} value={l.key}>{l.label}</option>)}
               </select>
             </div>
             <div className="md:col-span-3 flex gap-3">
@@ -130,7 +135,7 @@ export default function UtentesPage() {
           </div>
           <select className="input-kiosk !h-12 !text-base md:w-64" style={{height:'3rem',fontSize:'1rem'}} value={filterLocal} onChange={e=>setFilterLocal(e.target.value)} data-testid="filter-local">
             <option value="">Todos os locais</option>
-            {locations.map(l => <option key={l.key} value={l.key}>{l.label}</option>)}
+            {visibleLocations.map(l => <option key={l.key} value={l.key}>{l.label}</option>)}
           </select>
         </div>
 

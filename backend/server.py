@@ -9,7 +9,7 @@ import csv
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Any
 import uuid
 import requests
 from datetime import datetime, timezone, timedelta
@@ -25,12 +25,13 @@ db = client[os.environ['DB_NAME']]
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@instituicao.pt')
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')
 
-# Administradores fixos (Nome + Palavra-passe)
+# Administradores fixos (Nome + Palavra-passe + permissões)
+# scopes: "all" para super-admin, ou lista de locais que pode ver/gerir
 ADMIN_USERS = [
-    {"name": "Erpi Sede", "password": "sede123"},
-    {"name": "Erpi Parais", "password": "paraiso123"},
-    {"name": "Lar Residencial", "password": "larresidencial123"},
-    {"name": "Admin", "password": "admin2026"},
+    {"name": "Erpi Sede", "password": "sede123", "scopes": ["erpi_sede", "secretaria_sede"]},
+    {"name": "Erpi Parais", "password": "paraiso123", "scopes": ["erpi_parais", "secretaria_paraiso"]},
+    {"name": "Lar Residencial", "password": "larresidencial123", "scopes": ["lar_residencial"]},
+    {"name": "Admin", "password": "admin2026", "scopes": "all"},
 ]
 
 # Locais de visita (substitui o antigo 'instituicao' creche/lar)
@@ -53,6 +54,7 @@ class User(BaseModel):
     picture: Optional[str] = None
     is_admin: bool = False
     auth_provider: str = "google"  # "google" or "admin"
+    scopes: Optional[Any] = None  # "all" or list[str] of allowed location keys
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -152,6 +154,29 @@ async def require_admin(request: Request, authorization: Optional[str] = Header(
     return user
 
 
+def _user_scopes(user: User) -> Any:
+    """Return list of allowed location keys, or 'all' for super-admin."""
+    s = getattr(user, "scopes", None)
+    return s if s else "all"
+
+
+def _check_scope(user: User, local: str):
+    """Raise 403 if user is not allowed to operate on the given location."""
+    s = _user_scopes(user)
+    if s == "all":
+        return
+    if local not in s:
+        raise HTTPException(status_code=403, detail="Sem permissão para este local")
+
+
+def _scope_query(user: User, field: str = "local") -> dict:
+    """Mongo filter snippet that restricts the given field to the user's scope."""
+    s = _user_scopes(user)
+    if s == "all":
+        return {}
+    return {field: {"$in": s}}
+
+
 def _set_session_cookie(response: Response, token: str):
     response.set_cookie(
         key="session_token",
@@ -233,6 +258,7 @@ async def admin_login(payload: AdminLogin, response: Response):
         raise HTTPException(status_code=401, detail="Nome ou palavra-passe incorrectos")
 
     fake_email = matched["name"].lower().replace(" ", "_") + "@admin.local"
+    scopes = matched.get("scopes", "all")
     user = await db.users.find_one({"email": fake_email}, {"_id": 0})
     if not user:
         user_id = f"user_{uuid.uuid4().hex[:12]}"
@@ -243,14 +269,15 @@ async def admin_login(payload: AdminLogin, response: Response):
             "picture": None,
             "is_admin": True,
             "auth_provider": "admin",
+            "scopes": scopes,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         await db.users.insert_one(user.copy())
     else:
         user_id = user["user_id"]
-        if not user.get("is_admin"):
-            await db.users.update_one({"user_id": user_id}, {"$set": {"is_admin": True}})
-            user["is_admin"] = True
+        update = {"is_admin": True, "scopes": scopes}
+        await db.users.update_one({"user_id": user_id}, {"$set": update})
+        user.update(update)
 
     session_token = f"admin_{uuid.uuid4().hex}"
     expires_at = datetime.now(timezone.utc) + timedelta(days=7)
@@ -365,23 +392,33 @@ async def history(
 
 @api_router.get("/visits/stats")
 async def stats(request: Request, authorization: Optional[str] = Header(None)):
-    await require_admin(request, authorization)
+    user = await require_admin(request, authorization)
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    total = await db.visits.count_documents({})
-    dentro = await db.visits.count_documents({"saida": None})
-    hoje = await db.visits.count_documents({"entrada": {"$gte": today, "$lt": today + "T23:59:59"}})
-    creche_dentro = 0  # legacy field, kept for compat
-    lar_dentro = await db.visits.count_documents({"saida": None, "instituicao": {"$in": list(VALID_LOCATIONS.keys())}})
+    scope = _scope_query(user, "instituicao")
 
-    # Per-location counts
+    def _q(extra=None):
+        q = dict(scope)
+        if extra:
+            q.update(extra)
+        return q
+
+    total = await db.visits.count_documents(_q())
+    dentro = await db.visits.count_documents(_q({"saida": None}))
+    hoje = await db.visits.count_documents(_q({"entrada": {"$gte": today, "$lt": today + "T23:59:59"}}))
+    creche_dentro = 0  # legacy field, kept for compat
+    lar_dentro = await db.visits.count_documents(_q({"saida": None}))
+
+    # Per-location counts (filtered by user's scope)
+    allowed_locations = VALID_LOCATIONS.keys() if _user_scopes(user) == "all" else [k for k in VALID_LOCATIONS if k in _user_scopes(user)]
     por_local = {}
-    for key, label in VALID_LOCATIONS.items():
+    for key in allowed_locations:
+        label = VALID_LOCATIONS[key]
         c = await db.visits.count_documents({"saida": None, "instituicao": key})
         por_local[key] = {"label": label, "dentro": c}
 
     # average time (minutes) for completed visits
     pipeline = [
-        {"$match": {"saida": {"$ne": None}}},
+        {"$match": _q({"saida": {"$ne": None}})},
         {"$project": {"dur": {"$subtract": [{"$toDate": "$saida"}, {"$toDate": "$entrada"}]}}},
         {"$group": {"_id": None, "avg": {"$avg": "$dur"}}},
     ]
@@ -390,12 +427,12 @@ async def stats(request: Request, authorization: Optional[str] = Header(None)):
     if agg and agg[0].get("avg"):
         avg_minutes = round(agg[0]["avg"] / 60000, 1)
 
-    # Last 7 days
+    # Last 7 days (filtered by scope)
     last7 = []
     now = datetime.now(timezone.utc)
     for i in range(6, -1, -1):
         d = (now - timedelta(days=i)).strftime("%Y-%m-%d")
-        c = await db.visits.count_documents({"entrada": {"$gte": d, "$lt": d + "T23:59:59"}})
+        c = await db.visits.count_documents(_q({"entrada": {"$gte": d, "$lt": d + "T23:59:59"}}))
         last7.append({"dia": d, "total": c})
 
     return {
@@ -412,9 +449,9 @@ async def stats(request: Request, authorization: Optional[str] = Header(None)):
 
 @api_router.get("/visits/export")
 async def export_csv(request: Request, authorization: Optional[str] = Header(None)):
-    await require_admin(request, authorization)
-    # Export ALL records - history is permanent
-    docs = await db.visits.find({}, {"_id": 0}).sort("entrada", -1).to_list(length=None)
+    user = await require_admin(request, authorization)
+    # Export ALL records within scope - history is permanent
+    docs = await db.visits.find(_scope_query(user, "instituicao"), {"_id": 0}).sort("entrada", -1).to_list(length=None)
 
     buf = io.StringIO()
     writer = csv.writer(buf, delimiter=";")
@@ -612,8 +649,8 @@ async def list_bookings(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
 ):
-    await require_admin(request, authorization)
-    query: dict = {}
+    user = await require_admin(request, authorization)
+    query: dict = dict(_scope_query(user, "local"))
     if status in ("marcada", "concluida", "cancelada"):
         query["status"] = status
     if upcoming:
@@ -632,10 +669,11 @@ async def list_bookings(
 
 @api_router.post("/bookings/{booking_id}/cancel", response_model=Booking)
 async def cancel_booking(booking_id: str, request: Request, authorization: Optional[str] = Header(None)):
-    await require_admin(request, authorization)
+    user = await require_admin(request, authorization)
     doc = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Marcação não encontrada")
+    _check_scope(user, doc.get("local", ""))
     await db.bookings.update_one({"booking_id": booking_id}, {"$set": {"status": "cancelada"}})
     doc["status"] = "cancelada"
     return _booking_from_doc(doc)
@@ -643,10 +681,11 @@ async def cancel_booking(booking_id: str, request: Request, authorization: Optio
 
 @api_router.post("/bookings/{booking_id}/conclude", response_model=Booking)
 async def conclude_booking(booking_id: str, request: Request, authorization: Optional[str] = Header(None)):
-    await require_admin(request, authorization)
+    user = await require_admin(request, authorization)
     doc = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Marcação não encontrada")
+    _check_scope(user, doc.get("local", ""))
     await db.bookings.update_one({"booking_id": booking_id}, {"$set": {"status": "concluida"}})
     doc["status"] = "concluida"
     return _booking_from_doc(doc)
@@ -654,10 +693,12 @@ async def conclude_booking(booking_id: str, request: Request, authorization: Opt
 
 @api_router.delete("/bookings/{booking_id}")
 async def delete_booking(booking_id: str, request: Request, authorization: Optional[str] = Header(None)):
-    await require_admin(request, authorization)
-    res = await db.bookings.delete_one({"booking_id": booking_id})
-    if res.deleted_count == 0:
+    user = await require_admin(request, authorization)
+    doc = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    if not doc:
         raise HTTPException(status_code=404, detail="Marcação não encontrada")
+    _check_scope(user, doc.get("local", ""))
+    await db.bookings.delete_one({"booking_id": booking_id})
     return {"ok": True}
 
 
@@ -684,10 +725,13 @@ async def list_utentes(
     local: Optional[str] = None,
     nome: Optional[str] = None,
 ):
-    await require_admin(request, authorization)
+    user = await require_admin(request, authorization)
     query: dict = {}
     if local in VALID_LOCATIONS:
+        _check_scope(user, local)
         query["local"] = local
+    else:
+        query.update(_scope_query(user, "local"))
     if nome:
         query["nome"] = {"$regex": nome, "$options": "i"}
     docs = await db.utentes.find(query, {"_id": 0}).sort("nome", 1).to_list(length=None)
@@ -696,9 +740,10 @@ async def list_utentes(
 
 @api_router.post("/utentes", response_model=Utente)
 async def create_utente(payload: UtenteCreate, request: Request, authorization: Optional[str] = Header(None)):
-    await require_admin(request, authorization)
+    user = await require_admin(request, authorization)
     if payload.local not in VALID_LOCATIONS:
         raise HTTPException(status_code=400, detail="Local inválido")
+    _check_scope(user, payload.local)
     nome = (payload.nome or "").strip()
     if not nome:
         raise HTTPException(status_code=400, detail="Nome obrigatório")
@@ -714,28 +759,33 @@ async def create_utente(payload: UtenteCreate, request: Request, authorization: 
 
 @api_router.put("/utentes/{utente_id}", response_model=Utente)
 async def update_utente(utente_id: str, payload: UtenteCreate, request: Request, authorization: Optional[str] = Header(None)):
-    await require_admin(request, authorization)
+    user = await require_admin(request, authorization)
     if payload.local not in VALID_LOCATIONS:
         raise HTTPException(status_code=400, detail="Local inválido")
+    _check_scope(user, payload.local)
+    existing = await db.utentes.find_one({"utente_id": utente_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Utente não encontrado")
+    _check_scope(user, existing["local"])  # ensure they can edit current local too
     nome = (payload.nome or "").strip()
     if not nome:
         raise HTTPException(status_code=400, detail="Nome obrigatório")
-    res = await db.utentes.update_one(
+    await db.utentes.update_one(
         {"utente_id": utente_id},
         {"$set": {"nome": nome, "local": payload.local}},
     )
-    if res.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Utente não encontrado")
     doc = await db.utentes.find_one({"utente_id": utente_id}, {"_id": 0})
     return _utente_from_doc(doc)
 
 
 @api_router.delete("/utentes/{utente_id}")
 async def delete_utente(utente_id: str, request: Request, authorization: Optional[str] = Header(None)):
-    await require_admin(request, authorization)
-    res = await db.utentes.delete_one({"utente_id": utente_id})
-    if res.deleted_count == 0:
+    user = await require_admin(request, authorization)
+    existing = await db.utentes.find_one({"utente_id": utente_id}, {"_id": 0})
+    if not existing:
         raise HTTPException(status_code=404, detail="Utente não encontrado")
+    _check_scope(user, existing["local"])
+    await db.utentes.delete_one({"utente_id": utente_id})
     return {"ok": True}
 
 
