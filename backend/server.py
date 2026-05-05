@@ -718,6 +718,15 @@ def _utente_from_doc(doc: dict) -> Utente:
     return Utente(**doc)
 
 
+@api_router.get("/utentes/public", response_model=List[Utente])
+async def list_utentes_public(local: str):
+    """Lookup público: devolve utentes de um local específico (usado pelos formulários)."""
+    if local not in VALID_LOCATIONS:
+        raise HTTPException(status_code=400, detail="Local inválido")
+    docs = await db.utentes.find({"local": local}, {"_id": 0}).sort("nome", 1).to_list(length=None)
+    return [_utente_from_doc(d) for d in docs]
+
+
 @api_router.get("/utentes", response_model=List[Utente])
 async def list_utentes(
     request: Request,

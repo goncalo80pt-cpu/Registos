@@ -29,9 +29,25 @@ export default function BookingPage() {
   const [availability, setAvailability] = useState(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
+  // Autocomplete utentes for the chosen location
+  const [utentes, setUtentes] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
   useEffect(() => {
     api.get("/locations").then(r => setLocations(r.data)).catch(() => {});
   }, []);
+
+  // Load utentes whenever local changes
+  useEffect(() => {
+    if (!local) { setUtentes([]); return; }
+    api.get("/utentes/public", { params: { local } })
+      .then(r => setUtentes(r.data))
+      .catch(() => setUtentes([]));
+  }, [local]);
+
+  const matches = (form.pessoa_visitada || "").trim().length >= 1
+    ? utentes.filter(u => u.nome.toLowerCase().includes(form.pessoa_visitada.toLowerCase())).slice(0, 8)
+    : utentes.slice(0, 8);
 
   const loadAvailability = useCallback(async () => {
     if (!local || !form.data) { setAvailability(null); return; }
@@ -182,7 +198,36 @@ export default function BookingPage() {
 
           <div>
             <label className="label-up mb-2 block">Nome do idoso *</label>
-            <input className="input-kiosk" value={form.pessoa_visitada} onChange={update("pessoa_visitada")} placeholder="Ex: Sr. António" data-testid="booking-visitado" />
+            <div className="relative">
+              <input
+                className="input-kiosk"
+                value={form.pessoa_visitada}
+                onChange={(e) => { setForm({ ...form, pessoa_visitada: e.target.value }); setShowSuggestions(true); }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                placeholder={local ? "Comece a escrever o nome..." : "Escolha primeiro o local"}
+                disabled={!local}
+                data-testid="booking-visitado"
+                autoComplete="off"
+              />
+              {showSuggestions && local && matches.length > 0 && (
+                <ul className="absolute left-0 right-0 mt-1 bg-white border border-[#E5E7E2] rounded-lg shadow-xl max-h-72 overflow-y-auto z-30" data-testid="visitado-suggestions">
+                  {matches.map((u) => (
+                    <li
+                      key={u.utente_id}
+                      onMouseDown={(e) => { e.preventDefault(); setForm({ ...form, pessoa_visitada: u.nome }); setShowSuggestions(false); }}
+                      className="px-4 py-3 cursor-pointer hover:bg-[#F1F2F0] text-[#1F2924] border-b border-[#F1F2F0] last:border-0"
+                      data-testid={`suggest-${u.utente_id}`}
+                    >
+                      {u.nome}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            {local && utentes.length > 0 && !form.pessoa_visitada && (
+              <div className="text-xs text-[#5C6B62] mt-1">{utentes.length} utentes disponíveis neste local</div>
+            )}
           </div>
 
           <div>
