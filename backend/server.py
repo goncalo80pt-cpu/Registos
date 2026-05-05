@@ -108,6 +108,33 @@ class Utente(BaseModel):
     created_at: datetime
 
 
+class SaidaCreate(BaseModel):
+    utente_id: str
+    saida_prevista: datetime
+    regresso_previsto: datetime
+    motivo: str  # "Consulta médica" | "Visita familiar" | "Passeio" | etc
+    responsavel_nome: Optional[str] = None
+    responsavel_telefone: Optional[str] = None
+    observacoes: Optional[str] = None
+
+
+class SaidaProgramada(BaseModel):
+    saida_id: str
+    utente_id: str
+    utente_nome: str
+    local: str
+    saida_prevista: datetime
+    regresso_previsto: datetime
+    motivo: str
+    responsavel_nome: Optional[str] = None
+    responsavel_telefone: Optional[str] = None
+    observacoes: Optional[str] = None
+    status: str = "agendada"  # agendada | em_curso | concluida | cancelada
+    saida_real: Optional[datetime] = None
+    regresso_real: Optional[datetime] = None
+    created_at: datetime
+
+
 class Visit(BaseModel):
     visit_id: str
     instituicao: str
@@ -707,6 +734,128 @@ async def get_locations():
     return [{"key": k, "label": v} for k, v in VALID_LOCATIONS.items()]
 
 
+# ----------------- Saídas Programadas -----------------
+def _saida_from_doc(doc: dict) -> SaidaProgramada:
+    for k in ("saida_prevista", "regresso_previsto", "saida_real", "regresso_real", "created_at"):
+        v = doc.get(k)
+        if isinstance(v, str):
+            try:
+                doc[k] = datetime.fromisoformat(v)
+            except Exception:
+                pass
+    return SaidaProgramada(**doc)
+
+
+@api_router.post("/saidas", response_model=SaidaProgramada)
+async def create_saida(payload: SaidaCreate, request: Request, authorization: Optional[str] = Header(None)):
+    user = await require_admin(request, authorization)
+    utente = await db.utentes.find_one({"utente_id": payload.utente_id}, {"_id": 0})
+    if not utente:
+        raise HTTPException(status_code=404, detail="Utente não encontrado")
+    _check_scope(user, utente["local"])
+
+    sp = payload.saida_prevista
+    rp = payload.regresso_previsto
+    if sp.tzinfo is None:
+        sp = sp.replace(tzinfo=timezone.utc)
+    if rp.tzinfo is None:
+        rp = rp.replace(tzinfo=timezone.utc)
+    if rp <= sp:
+        raise HTTPException(status_code=400, detail="O regresso tem de ser depois da saída")
+    if not payload.motivo.strip():
+        raise HTTPException(status_code=400, detail="Indique o motivo")
+
+    saida = SaidaProgramada(
+        saida_id=f"s_{uuid.uuid4().hex[:12]}",
+        utente_id=payload.utente_id,
+        utente_nome=utente["nome"],
+        local=utente["local"],
+        saida_prevista=sp,
+        regresso_previsto=rp,
+        motivo=payload.motivo.strip(),
+        responsavel_nome=(payload.responsavel_nome or "").strip() or None,
+        responsavel_telefone=(payload.responsavel_telefone or "").strip() or None,
+        observacoes=(payload.observacoes or "").strip() or None,
+        status="agendada",
+        created_at=datetime.now(timezone.utc),
+    )
+    doc = saida.model_dump()
+    for k in ("saida_prevista", "regresso_previsto", "created_at"):
+        doc[k] = doc[k].isoformat() if doc[k] else None
+    doc["saida_real"] = None
+    doc["regresso_real"] = None
+    doc["expires_at"] = sp + timedelta(days=365)
+    await db.saidas.insert_one(doc)
+    return saida
+
+
+@api_router.get("/saidas", response_model=List[SaidaProgramada])
+async def list_saidas(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+    status: Optional[str] = None,
+    upcoming: bool = False,
+):
+    user = await require_admin(request, authorization)
+    query: dict = dict(_scope_query(user, "local"))
+    if status in ("agendada", "em_curso", "concluida", "cancelada"):
+        query["status"] = status
+    if upcoming:
+        query["saida_prevista"] = {"$gte": datetime.now(timezone.utc).isoformat()}
+        query["status"] = {"$in": ["agendada", "em_curso"]}
+    docs = await db.saidas.find(query, {"_id": 0}).sort("saida_prevista", 1).to_list(length=None)
+    return [_saida_from_doc(d) for d in docs]
+
+
+@api_router.post("/saidas/{saida_id}/iniciar", response_model=SaidaProgramada)
+async def saida_iniciar(saida_id: str, request: Request, authorization: Optional[str] = Header(None)):
+    user = await require_admin(request, authorization)
+    doc = await db.saidas.find_one({"saida_id": saida_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Saída não encontrada")
+    _check_scope(user, doc.get("local", ""))
+    now_iso = datetime.now(timezone.utc).isoformat()
+    await db.saidas.update_one({"saida_id": saida_id}, {"$set": {"status": "em_curso", "saida_real": now_iso}})
+    doc.update({"status": "em_curso", "saida_real": now_iso})
+    return _saida_from_doc(doc)
+
+
+@api_router.post("/saidas/{saida_id}/regresso", response_model=SaidaProgramada)
+async def saida_regresso(saida_id: str, request: Request, authorization: Optional[str] = Header(None)):
+    user = await require_admin(request, authorization)
+    doc = await db.saidas.find_one({"saida_id": saida_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Saída não encontrada")
+    _check_scope(user, doc.get("local", ""))
+    now_iso = datetime.now(timezone.utc).isoformat()
+    await db.saidas.update_one({"saida_id": saida_id}, {"$set": {"status": "concluida", "regresso_real": now_iso}})
+    doc.update({"status": "concluida", "regresso_real": now_iso})
+    return _saida_from_doc(doc)
+
+
+@api_router.post("/saidas/{saida_id}/cancel", response_model=SaidaProgramada)
+async def saida_cancel(saida_id: str, request: Request, authorization: Optional[str] = Header(None)):
+    user = await require_admin(request, authorization)
+    doc = await db.saidas.find_one({"saida_id": saida_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Saída não encontrada")
+    _check_scope(user, doc.get("local", ""))
+    await db.saidas.update_one({"saida_id": saida_id}, {"$set": {"status": "cancelada"}})
+    doc["status"] = "cancelada"
+    return _saida_from_doc(doc)
+
+
+@api_router.delete("/saidas/{saida_id}")
+async def saida_delete(saida_id: str, request: Request, authorization: Optional[str] = Header(None)):
+    user = await require_admin(request, authorization)
+    doc = await db.saidas.find_one({"saida_id": saida_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Saída não encontrada")
+    _check_scope(user, doc.get("local", ""))
+    await db.saidas.delete_one({"saida_id": saida_id})
+    return {"ok": True}
+
+
 # ----------------- Utentes (residentes) -----------------
 def _utente_from_doc(doc: dict) -> Utente:
     v = doc.get("created_at")
@@ -822,6 +971,7 @@ async def setup_indexes():
     try:
         await db.visits.create_index("expires_at", expireAfterSeconds=0)
         await db.bookings.create_index("expires_at", expireAfterSeconds=0)
+        await db.saidas.create_index("expires_at", expireAfterSeconds=0)
     except Exception as e:
         logger.warning(f"Failed to create TTL index: {e}")
     # Migrate legacy 'creche' / 'lar' values to the new location keys

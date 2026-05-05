@@ -15,6 +15,7 @@ import BookingPage from "@/pages/BookingPage";
 import BookingsAdminPage from "@/pages/BookingsAdminPage";
 import WeeklyAgendaPage from "@/pages/WeeklyAgendaPage";
 import UtentesPage from "@/pages/UtentesPage";
+import SaidasPage from "@/pages/SaidasPage";
 
 function AppRouter() {
   const location = useLocation();
@@ -33,6 +34,7 @@ function AppRouter() {
         <Route path="/marcacoes" element={<BookingsAdminPage />} />
         <Route path="/agenda" element={<WeeklyAgendaPage />} />
         <Route path="/utentes" element={<UtentesPage />} />
+        <Route path="/saidas" element={<SaidasPage />} />
       </Routes>
     </>
   );
