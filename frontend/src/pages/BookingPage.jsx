@@ -74,6 +74,9 @@ export default function BookingPage() {
     if (!form.visitante_nome.trim() || !form.pessoa_visitada.trim()) {
       toast.error("Preencha o seu nome e o nome do idoso."); return;
     }
+    if (!form.telefone.trim()) {
+      toast.error("O número de telefone é obrigatório."); return;
+    }
     if (!slot) { toast.error("Escolha um horário disponível."); return; }
 
     const dataHora = new Date(`${form.data}T${slot}:00`);
@@ -231,8 +234,8 @@ export default function BookingPage() {
           </div>
 
           <div>
-            <label className="label-up mb-2 block">Telefone</label>
-            <input className="input-kiosk" value={form.telefone} onChange={update("telefone")} placeholder="9XX XXX XXX" data-testid="booking-telefone" />
+            <label className="label-up mb-2 block">Telefone *</label>
+            <input className="input-kiosk" value={form.telefone} onChange={update("telefone")} placeholder="9XX XXX XXX" inputMode="tel" required data-testid="booking-telefone" />
           </div>
 
           <div>

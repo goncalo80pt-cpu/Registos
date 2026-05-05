@@ -614,6 +614,8 @@ async def create_booking(payload: BookingCreate):
         raise HTTPException(status_code=400, detail=f"Local inválido. Escolha um de: {', '.join(VALID_LOCATIONS.keys())}")
     if not payload.visitante_nome.strip() or not payload.pessoa_visitada.strip():
         raise HTTPException(status_code=400, detail="Nome do visitante e do idoso são obrigatórios")
+    if not (payload.telefone or "").strip():
+        raise HTTPException(status_code=400, detail="O número de telefone é obrigatório para marcar a visita")
 
     dh = payload.data_hora
     if dh.tzinfo is None:
