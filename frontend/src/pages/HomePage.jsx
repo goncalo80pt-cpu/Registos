@@ -1,7 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import Header from "../components/Header";
-import { Phone, Clock, ScrollText, Info, CalendarPlus, ArrowRight } from "lucide-react";
+import { useAuth } from "../lib/auth";
+import { Phone, Clock, ScrollText, Info, CalendarPlus, ArrowRight, LogOut } from "lucide-react";
 
 const REGULATION_RULES = [
   "As visitas devem ser agendadas previamente, entre as 09h00 e as 18h00, por telefone (ERPI Brito – 253 572 414; ERPI Polo do Paraíso e Lar Residencial – 253 084 588).",
@@ -23,6 +24,8 @@ const REGULATION_RULES = [
 ];
 
 export default function HomePage() {
+  const { user } = useAuth();
+  const isAdmin = !!user?.is_admin;
   return (
     <div className="min-h-screen" data-testid="home-page">
       <Header />
@@ -47,7 +50,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="mb-10 sm:mb-14 fade-in-up">
+        <section className={`mb-10 sm:mb-14 fade-in-up grid gap-4 sm:gap-6 ${isAdmin ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
           <Link
             to="/marcar"
             className="group block card-crisp p-6 sm:p-8 md:p-10 transition-all hover:-translate-y-1 hover:shadow-lg"
@@ -65,6 +68,26 @@ export default function HomePage() {
               <ArrowRight className="w-6 h-6 text-[#5C6B62] group-hover:translate-x-2 group-hover:text-[#1F2924] transition-all shrink-0" />
             </div>
           </Link>
+
+          {isAdmin && (
+            <Link
+              to="/saidas"
+              className="group block card-crisp p-6 sm:p-8 md:p-10 transition-all hover:-translate-y-1 hover:shadow-lg"
+              data-testid="tile-saidas"
+            >
+              <div className="flex items-center gap-5">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#C26D5C] text-white flex items-center justify-center shrink-0">
+                  <LogOut className="w-7 h-7 sm:w-8 sm:h-8 rotate-180" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="label-up mb-1">Administração</div>
+                  <h2 className="font-heading text-xl sm:text-2xl md:text-3xl font-medium text-[#1F2924]">Saídas dos utentes</h2>
+                  <p className="text-sm sm:text-base text-[#5C6B62] mt-1">Agendar e acompanhar consultas, passeios e visitas familiares.</p>
+                </div>
+                <ArrowRight className="w-6 h-6 text-[#5C6B62] group-hover:translate-x-2 group-hover:text-[#C26D5C] transition-all shrink-0" />
+              </div>
+            </Link>
+          )}
         </section>
 
         <section className="card-crisp p-6 sm:p-10 md:p-14 fade-in-up" data-testid="regulation-section">
