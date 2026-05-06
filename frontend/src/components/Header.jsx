@@ -18,7 +18,7 @@ export default function Header({ minimal = false }) {
   const fmtDate = time.toLocaleDateString("pt-PT", { weekday: "long", day: "2-digit", month: "long" });
 
   return (
-    <header className="crystal-glass sticky top-0 z-50" data-testid="app-header">
+    <header className="crystal-glass sticky top-0 z-50 print:hidden" data-testid="app-header">
       <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 md:px-10 py-4 sm:py-5">
         <Link to="/" className="flex items-center gap-3" data-testid="brand-link">
           <div className="w-10 h-10 rounded-xl bg-[#4A7C59] flex items-center justify-center text-white font-heading text-xl font-semibold shrink-0">

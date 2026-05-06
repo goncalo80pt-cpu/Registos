@@ -3,7 +3,7 @@ import Header from "../components/Header";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useNavigate } from "react-router-dom";
-import { Search, Plus, Trash2, Pencil, Building2, Check, X, Users } from "lucide-react";
+import { Search, Plus, Trash2, Pencil, Building2, Check, X, Users, Printer } from "lucide-react";
 import { toast } from "sonner";
 
 export default function UtentesPage() {
@@ -22,6 +22,9 @@ export default function UtentesPage() {
   const [editingId, setEditingId] = useState(null);
   const [editNome, setEditNome] = useState("");
   const [editLocal, setEditLocal] = useState("");
+
+  const [confirmDelete, setConfirmDelete] = useState(null); // { id, nome } or null
+  const [deleting, setDeleting] = useState(false);
 
   const locMap = locations.reduce((m, l) => ({ ...m, [l.key]: l.label }), {});
   // Filter locations to user's scope (super-admin sees all)
@@ -81,10 +84,21 @@ export default function UtentesPage() {
     } catch (e) { toast.error(e?.response?.data?.detail || "Erro"); }
   };
 
-  const removeUtente = async (id, nome) => {
-    if (!window.confirm(`Remover "${nome}" da lista?`)) return;
-    try { await api.delete(`/utentes/${id}`); toast.success("Removido"); load(); }
-    catch { toast.error("Erro ao remover"); }
+  const removeUtente = (id, nome) => setConfirmDelete({ id, nome });
+
+  const performDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/utentes/${confirmDelete.id}`);
+      toast.success(`"${confirmDelete.nome}" removido`);
+      setConfirmDelete(null);
+      load();
+    } catch {
+      toast.error("Erro ao remover");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // Group by local
@@ -97,19 +111,30 @@ export default function UtentesPage() {
     <div className="min-h-screen" data-testid="utentes-page">
       <Header />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-6 sm:py-10 md:py-14 fade-in-up">
-        <div className="flex items-end justify-between mb-8 gap-4 flex-wrap">
+        <div className="hidden print:block mb-6 text-center" data-testid="print-header">
+          <div className="text-xs uppercase tracking-widest text-gray-600">Centro Social de Brito</div>
+          <div className="font-heading text-2xl font-light mt-1">Lista de utentes</div>
+          <div className="text-xs text-gray-700 mt-1">Impresso em {new Date().toLocaleDateString("pt-PT")} · {list.length} utente(s)</div>
+        </div>
+
+        <div className="flex items-end justify-between mb-8 gap-4 flex-wrap print:hidden">
           <div>
             <div className="label-up mb-3">Administração</div>
             <h1 className="font-heading text-2xl sm:text-3xl md:text-4xl font-light text-[#1F2924]">Lista de utentes</h1>
             <p className="text-[#5C6B62] mt-2">{list.length} utentes na lista</p>
           </div>
-          <button onClick={() => setShowAdd(s => !s)} className="btn-primary px-5 py-3 flex items-center gap-2 self-start" data-testid="add-utente-btn">
-            <Plus className="w-4 h-4" /> Adicionar utente
-          </button>
+          <div className="flex items-center gap-3 self-start flex-wrap">
+            <button onClick={() => window.print()} className="btn-ghost px-4 py-3 flex items-center gap-2 text-sm" data-testid="print-utentes-btn">
+              <Printer className="w-4 h-4" /> Imprimir
+            </button>
+            <button onClick={() => setShowAdd(s => !s)} className="btn-primary px-5 py-3 flex items-center gap-2" data-testid="add-utente-btn">
+              <Plus className="w-4 h-4" /> Adicionar utente
+            </button>
+          </div>
         </div>
 
         {showAdd && (
-          <form onSubmit={addUtente} className="card-crisp p-6 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-end" data-testid="add-utente-form">
+          <form onSubmit={addUtente} className="card-crisp p-6 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-end print:hidden" data-testid="add-utente-form">
             <div className="md:col-span-2">
               <label className="label-up mb-2 block">Nome do utente</label>
               <input className="input-kiosk !h-12 !text-base" style={{height:'3rem',fontSize:'1rem'}} value={newNome} onChange={e=>setNewNome(e.target.value)} placeholder="Nome completo" data-testid="new-utente-nome" />
@@ -128,7 +153,7 @@ export default function UtentesPage() {
           </form>
         )}
 
-        <div className="card-crisp p-5 mb-6 flex flex-col md:flex-row gap-4">
+        <div className="card-crisp p-5 mb-6 flex flex-col md:flex-row gap-4 print:hidden">
           <div className="flex-1 relative">
             <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[#5C6B62]" />
             <input className="input-kiosk pl-11 !h-12 !text-base" style={{height:'3rem',fontSize:'1rem'}} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Pesquisar por nome..." data-testid="search-utentes" />
@@ -178,8 +203,8 @@ export default function UtentesPage() {
                             <div className="flex-1 min-w-0">
                               <div className="text-[#1F2924] font-medium truncate">{u.nome}</div>
                             </div>
-                            <button onClick={() => startEdit(u)} className="btn-ghost p-2 text-[#5C6B62] hover:text-[#1F2924]" data-testid={`edit-${u.utente_id}`} title="Editar"><Pencil className="w-4 h-4" /></button>
-                            <button onClick={() => removeUtente(u.utente_id, u.nome)} className="btn-ghost p-2 text-[#C26D5C]" data-testid={`remove-${u.utente_id}`} title="Remover"><Trash2 className="w-4 h-4" /></button>
+                            <button onClick={() => startEdit(u)} className="btn-ghost p-2 text-[#5C6B62] hover:text-[#1F2924] print:hidden" data-testid={`edit-${u.utente_id}`} title="Editar"><Pencil className="w-4 h-4" /></button>
+                            <button onClick={() => removeUtente(u.utente_id, u.nome)} className="btn-ghost p-2 text-[#C26D5C] print:hidden" data-testid={`remove-${u.utente_id}`} title="Remover"><Trash2 className="w-4 h-4" /></button>
                           </>
                         )}
                       </div>
@@ -191,6 +216,51 @@ export default function UtentesPage() {
           </div>
         )}
       </main>
+
+      {confirmDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1F2924]/60 backdrop-blur-sm print:hidden"
+          onClick={() => !deleting && setConfirmDelete(null)}
+          data-testid="confirm-delete-overlay"
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-[#FAEFEB] flex items-center justify-center text-[#C26D5C] mb-5">
+              <Trash2 className="w-7 h-7" />
+            </div>
+            <h2 className="font-heading text-2xl text-[#1F2924] mb-2">Eliminar utente?</h2>
+            <p className="text-[#5C6B62] leading-relaxed">
+              Tem a certeza que quer eliminar <strong className="text-[#1F2924]">"{confirmDelete.nome}"</strong> da lista de utentes? Esta ação não pode ser desfeita.
+            </p>
+            <div className="flex gap-3 mt-6 flex-col-reverse sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(null)}
+                disabled={deleting}
+                className="btn-ghost px-5 py-3 text-sm"
+                data-testid="confirm-delete-cancel"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={performDelete}
+                disabled={deleting}
+                className="px-5 py-3 text-sm font-medium text-white rounded-md flex items-center justify-center gap-2 disabled:opacity-60"
+                style={{ backgroundColor: "#C26D5C" }}
+                data-testid="confirm-delete-confirm"
+              >
+                <Trash2 className="w-4 h-4" />
+                {deleting ? "A eliminar..." : "Sim, eliminar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

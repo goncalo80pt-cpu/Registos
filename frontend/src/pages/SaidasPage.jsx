@@ -3,7 +3,7 @@ import Header from "../components/Header";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useNavigate } from "react-router-dom";
-import { Plus, Calendar, Clock, Phone, Building2, Check, X, Trash2, LogOut, LogIn, ArrowRight } from "lucide-react";
+import { Plus, Calendar, Clock, Phone, Building2, Check, X, Trash2, LogOut, LogIn, ArrowRight, Printer } from "lucide-react";
 import { toast } from "sonner";
 
 const STATUS_LABEL = { agendada: "Agendada", em_curso: "Em curso", concluida: "Concluída", cancelada: "Cancelada" };
@@ -138,15 +138,26 @@ export default function SaidasPage() {
     <div className="min-h-screen" data-testid="saidas-page">
       <Header />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 md:px-10 py-6 sm:py-10 md:py-14 fade-in-up">
-        <div className="flex items-end justify-between mb-8 gap-4 flex-wrap">
+        <div className="hidden print:block mb-6 text-center" data-testid="print-header">
+          <div className="text-xs uppercase tracking-widest text-gray-600">Centro Social de Brito</div>
+          <div className="font-heading text-2xl font-light mt-1">Saídas dos utentes</div>
+          <div className="text-xs text-gray-700 mt-1">Impresso em {new Date().toLocaleDateString("pt-PT")} · {list.length} saída(s)</div>
+        </div>
+
+        <div className="flex items-end justify-between mb-8 gap-4 flex-wrap print:hidden">
           <div>
             <div className="label-up mb-3">Administração</div>
             <h1 className="font-heading text-2xl sm:text-3xl md:text-4xl font-light text-[#1F2924]">Saídas dos utentes</h1>
             <p className="text-[#5C6B62] mt-2">Agendar e acompanhar saídas (consultas, visitas familiares, passeios).</p>
           </div>
-          <button onClick={() => setShowAdd(s => !s)} className="btn-primary px-5 py-3 flex items-center gap-2 self-start" data-testid="add-saida-btn">
-            <Plus className="w-4 h-4" /> Nova saída
-          </button>
+          <div className="flex items-center gap-3 self-start flex-wrap">
+            <button onClick={() => window.print()} className="btn-ghost px-4 py-3 flex items-center gap-2 text-sm" data-testid="print-saidas-btn">
+              <Printer className="w-4 h-4" /> Imprimir
+            </button>
+            <button onClick={() => setShowAdd(s => !s)} className="btn-primary px-5 py-3 flex items-center gap-2" data-testid="add-saida-btn">
+              <Plus className="w-4 h-4" /> Nova saída
+            </button>
+          </div>
         </div>
 
         {showAdd && (

@@ -89,9 +89,7 @@ export default function WeeklyAgendaPage() {
 
   return (
     <div className="min-h-screen" data-testid="agenda-page">
-      <div className="print:hidden">
-        <Header />
-      </div>
+      <Header />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 md:px-10 py-6 sm:py-10 md:py-14 fade-in-up">
         <div className="hidden print:block mb-6" data-testid="print-header">
           <div className="text-center">
