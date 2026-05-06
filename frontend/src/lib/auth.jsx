@@ -30,6 +30,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try { await api.post("/auth/logout"); } catch {}
     localStorage.removeItem("session_token");
+    localStorage.removeItem("csb_remember_login");
     setUser(null);
   };
 
