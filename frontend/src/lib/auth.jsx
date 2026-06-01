@@ -8,6 +8,15 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const checkAuth = useCallback(async () => {
+    // Skip silent /me check on public pages when there's no session token (avoids 401 noise)
+    const path = window.location.pathname || "/";
+    const publicPages = ["/", "/marcar", "/entrada", "/saida", "/login"];
+    const hasToken = !!localStorage.getItem("session_token");
+    if (publicPages.includes(path) && !hasToken) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
     try {
       const res = await api.get("/auth/me");
       setUser(res.data);
