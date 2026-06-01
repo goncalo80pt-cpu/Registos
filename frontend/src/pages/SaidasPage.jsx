@@ -161,7 +161,7 @@ export default function SaidasPage() {
         </div>
 
         {showAdd && (
-          <form onSubmit={submit} className="card-crisp p-6 md:p-8 mb-6 space-y-5" data-testid="add-saida-form">
+          <form onSubmit={submit} className="card-crisp p-6 md:p-8 mb-6 space-y-5 print:hidden" data-testid="add-saida-form">
             <h2 className="font-heading text-xl text-[#1F2924] mb-2">Agendar saída</h2>
 
             <div className={`grid grid-cols-1 ${hideLocalPicker ? "" : "md:grid-cols-2"} gap-4`}>
@@ -246,7 +246,7 @@ export default function SaidasPage() {
           </form>
         )}
 
-        <div className="flex gap-2 mb-6 flex-wrap" data-testid="filter-bar">
+        <div className="flex gap-2 mb-6 flex-wrap print:hidden" data-testid="filter-bar">
           {["agendada", "em_curso", "concluida", "cancelada", "todas"].map(s => (
             <button key={s} onClick={() => setFilter(s)} className={`px-4 py-2 rounded-lg text-sm font-medium transition ${filter === s ? "bg-[#4A7C59] text-white" : "bg-[#F1F2F0] text-[#5C6B62] hover:bg-[#E5E7E2]"}`} data-testid={`filter-${s}`}>
               {s === "todas" ? "Todas" : STATUS_LABEL[s]}
@@ -296,7 +296,7 @@ export default function SaidasPage() {
                   <div className="text-xs text-[#5C6B62] mb-3">Acompanhado por <strong className="text-[#1F2924]">{s.responsavel_nome}</strong>{s.responsavel_telefone && <> · <Phone className="inline w-3 h-3" /> {s.responsavel_telefone}</>}</div>
                 )}
                 {s.observacoes && <div className="text-xs text-[#5C6B62] mb-3 p-2 bg-[#F9F8F6] rounded">{s.observacoes}</div>}
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap print:hidden">
                   {s.status === "agendada" && (
                     <button onClick={() => iniciar(s.saida_id)} className="btn-primary px-3 py-2 text-xs flex items-center gap-1" data-testid={`iniciar-${s.saida_id}`}><ArrowRight className="w-3.5 h-3.5" /> Saiu agora</button>
                   )}

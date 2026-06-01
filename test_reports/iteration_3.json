@@ -1,0 +1,45 @@
+{
+  "summary": "Comprehensive E2E sweep of v3 changes (lunch break, telefone required, Erpi Paraíso accent, super-admin 'Admin', stats overdue+top, remember-login, Historico tabs, custom delete modal, print buttons, scoped admin auto-fill). Backend: 30/30 pytest passed. Frontend: all targeted flows verified end-to-end. No critical bugs found; 2 minor observations carried over from prior iteration.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "BookingPage / SaidasPage / HistoryPage", "issues": ["Date/Time inputs are still browser-native (input type=date / type=time) instead of a shadcn Calendar/TimePicker — guideline preference, not a functional bug"]},
+      {"screen": "Public pages (Home, /entrada, /marcar)", "issues": ["GET /api/auth/me returns 401 for anonymous users and pollutes the browser console; consider skipping the call when no session_token is present in localStorage"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_brito_v3.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(optional) Replace native date/time inputs with shadcn Calendar component for design consistency",
+    "(optional) Suppress /api/auth/me 401 noise on public pages (gate call on presence of session_token)"
+  ],
+  "critical_code_review_comments": [
+    "server.py is ~1075 lines and combines auth + visits + bookings + saidas + utentes + startup migrations. Past the 700-line guideline; split into routers/{auth,visits,bookings,saidas,utentes}.py for maintainability.",
+    "ADMIN_USERS are hard-coded with plaintext passwords (sede123, paraiso123, residencial123, admin2026) in server.py. Move to backend/.env (e.g. ADMIN_USERS_JSON) so passwords can be rotated without code deploy.",
+    "Remember-me stores password in clear text in localStorage under csb_remember_login. Acceptable for kiosk use but worth a warning UX (already partially in the helper text). At least consider storing only the name and prompting password each time.",
+    "stats() in /api/visits/stats does N+1 count_documents (~12 queries per call). Single $facet aggregation would be a small win as data grows.",
+    "stats() builds 'por_local' with a Mongo query that omits the scope filter on saida=None+instituicao=key; works only because it iterates over allowed_locations. Adding the explicit scope filter would be more defensive.",
+    "POST /api/visits/checkin and POST /api/bookings remain fully public (no auth, no rate limit). Spam / abuse risk in production — consider a kiosk shared-secret header or per-IP rate limit.",
+    "BookingCreate.data_hora has no upper bound (e.g. year 9999 accepted as long as slot matches). Add a sensible max horizon (e.g. +180 days).",
+    "Startup migration of legacy creche/lar runs on every boot; idempotent but should log count migrated to detect drift."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_brito_v3.py",
+    "/app/test_reports/iteration_3.json",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "success_rate": {"backend": "100% (30/30)", "frontend": "100% (all targeted flows)"},
+  "test_credentials": "Erpi Sede / sede123, Erpi Paraíso / paraiso123, Lar Residencial / residencial123, Admin / admin2026 — all four logins verified end-to-end (including case-insensitive + whitespace tolerant).",
+  "seed_data_creation": "No persistent seed created. Tests only POSTed booking payloads that were rejected (400) by validation, so no orphan data was inserted.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "v3 verified end-to-end. /app/backend/tests/test_brito_v3.py is the regression suite (30 tests, 4s). Covers: 4 admin logins incl. super-admin, accent + whitespace tolerance, /api/locations (5 entries, accent on 'Erpi Paraíso'), booking telefone required (empty/whitespace/missing all return 400), availability lunch break exclusion 12:00-13:30 on Tue and Mon afternoon-only, slot-in-lunch booking rejected, stats new fields saidas_em_atraso + top_utentes_mes, stats por_local scope filtering for sede/paraiso/admin, RBAC scopes on /utentes, /bookings, /saidas, 403 when creating utente outside scope, /saidas?status=todas tolerated. Frontend Playwright verified: login + remember-login (saves credentials to localStorage csb_remember_login), logout clears it, dashboard renders 'Utentes mais visitados' section and scoped 'por local', /historico has Visitas+Saídas tabs with Export only on Visitas tab, /utentes custom delete modal with 'Cancelar' / 'Sim, eliminar' buttons (no native confirm), print buttons on /agenda /historico /utentes /saidas, /saidas Nova form for scoped admin hides Local picker, /marcar auto-fills 'Erpi Sede' when scoped admin is logged in.",
+  "rca_of_the_issue": "No bugs found. All requested v3 changes verified working in both backend and frontend. User-reported 'credenciais não funcionam na PWA instalada' is almost certainly a stale-cache problem on the installed PWA (service worker was just bumped to v3 with network-first for JS/CSS) — the backend accepts all 4 credentials correctly via curl and the web app. Recommend telling the user to fully close the PWA and reopen, or uninstall+reinstall once after the v3 service worker rollout."
+}
