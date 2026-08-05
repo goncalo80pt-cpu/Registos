@@ -19,7 +19,6 @@ db.user_sessions.insertOne({
   created_at: new Date()
 });
 ```
-
 ## Test via API
 - GET /api/auth/me -H "Authorization: Bearer <sessionToken>"
 - GET /api/visits/history -H "Authorization: Bearer <sessionToken>"
